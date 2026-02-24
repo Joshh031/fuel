@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FUEL">
+<title>FUEL</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0c10; --sur:#13131a; --sur2:#1a1a24;
+  --bd:#2a2a38; --bd2:#38384a;
+  --txt:#e8e8f0; --muted:#6a6a85; --dim:#38384a;
+  --cal:#d4f044; --cal-d:rgba(212,240,68,0.08);
+  --prot:#6c7fff; --prot-d:rgba(108,127,255,0.08);
+  --fat:#ff8c42; --fat-d:rgba(255,140,66,0.08);
+  --fiber:#3de8a0; --fiber-d:rgba(61,232,160,0.08);
+  --water:#29b6f6; --water-d:rgba(41,182,246,0.08);
+  --warn:#ff5252;
+  --r:10px; --rs:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--txt);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:calc(env(safe-area-inset-bottom)+60px);}
+.app{max-width:640px;margin:0 auto;padding:18px 14px 40px;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--bd);}
+.logo{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;}
+.date-str{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);display:inline-block;margin-left:8px;transition:background 0.3s;}
+.sync-dot.ok{background:var(--fiber);}
+.sync-dot.err{background:var(--warn);}
+.big-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.big-bar{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:13px 15px;}
+.big-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.big-bar-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.big-bar-nums{display:flex;align-items:baseline;gap:5px;}
+.big-bar-val{font-size:26px;font-weight:800;line-height:1;}
+.big-bar.cal .big-bar-val{color:var(--cal);}
+.big-bar.prot .big-bar-val{color:var(--prot);}
+.big-bar-target{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);}
+.big-bar-pct{font-size:26px;font-weight:800;}
+.big-bar.cal .big-bar-pct{color:var(--cal);}
+.big-bar.prot .big-bar-pct{color:var(--prot);}
+.bar-track{height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
+.big-bar.cal .bar-fill{background:var(--cal);}
+.big-bar.prot .bar-fill{background:var(--prot);}
+.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
+.mini-card{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:11px;}
+.mini-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.mini-val{font-size:17px;font-weight:700;margin-bottom:2px;}
+.mini-card.fat .mini-val{color:var(--fat);}
+.mini-card.fiber .mini-val{color:var(--fiber);}
+.mini-card.water .mini-val{color:var(--water);}
+.mini-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:6px;}
+.mini-track{height:3px;background:var(--sur2);border-radius:2px;overflow:hidden;}
+.mini-fill{height:100%;border-radius:2px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
+.mini-card.fat .mini-fill{background:var(--fat);}
+.mini-card.fiber .mini-fill{background:var(--fiber);}
+.mini-card.water .mini-fill{background:var(--water);}
+.water-btns{display:flex;gap:4px;margin-top:7px;}
+.wbtn{flex:1;background:var(--sur2);border:1px solid var(--bd);border-radius:5px;color:var(--water);font-family:'DM Mono',monospace;font-size:11px;padding:4px 2px;cursor:pointer;text-align:center;transition:all 0.15s;}
+.wbtn:active{background:var(--water-d);border-color:var(--water);}
+.status-row{display:flex;gap:7px;margin-bottom:10px;}
+.sbadge{flex:1;background:var(--sur);border:1px solid var(--bd);border-radius:var(--rs);padding:9px 12px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;min-width:100px;}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--dim);}
+.slbl{color:var(--muted);font-weight:400;font-size:11px;}
+.assessment{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;margin-bottom:10px;display:none;}
+.assessment.on{display:block;}
+.a-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.a-icon{font-size:16px;}
+.a-status{font-size:12px;font-weight:700;}
+.a-note{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5;}
+.sec{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin:18px 0 7px;}
+.log-panel{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
+.log-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.log-tabs::-webkit-scrollbar{display:none;}
+.log-tab{flex:1;min-width:68px;padding:10px 5px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all 0.15s;white-space:nowrap;text-align:center;}
+.log-tab.active{color:var(--cal);border-bottom-color:var(--cal);background:var(--cal-d);}
+.log-pane{display:none;}
+.log-pane.active{display:block;}
+.chips{display:flex;gap:5px;padding:11px 12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0;padding:5px 13px;border-radius:18px;border:1px solid var(--bd);background:none;color:var(--muted);font-size:11px;font-family:'Syne',sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.chip.active{border-color:var(--cal);background:var(--cal-d);color:var(--cal);}
+.iw{padding:9px 12px;}
+textarea.ti{width:100%;background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--txt);font-family:'DM Mono',monospace;font-size:13px;padding:10px 11px;resize:none;min-height:68px;outline:none;line-height:1.6;-webkit-appearance:none;}
+textarea.ti::placeholder{color:var(--dim);}
+textarea.ni{width:100%;background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--txt);font-family:'DM Mono',monospace;font-size:11px;padding:7px 11px;resize:none;height:36px;outline:none;margin-top:5px;-webkit-appearance:none;}
+textarea.ni::placeholder{color:var(--dim);}
+.pdrop{border:2px dashed var(--bd);border-radius:var(--rs);padding:24px 14px;text-align:center;cursor:pointer;position:relative;transition:all 0.2s;}
+.pdrop:active{border-color:var(--cal);background:var(--cal-d);}
+.pdrop input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.pdrop p{color:var(--muted);font-size:12px;margin-top:5px;}
+.pdrop small{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);}
+.pprev{display:none;margin-top:9px;}
+.pprev img{max-width:100%;max-height:140px;border-radius:var(--rs);border:1px solid var(--bd);object-fit:cover;}
+.vc{text-align:center;padding:14px 0 6px;}
+.vbtn{width:58px;height:58px;border-radius:50%;border:2px solid var(--bd);background:var(--sur2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:20px;transition:all 0.2s;margin-bottom:8px;}
+.vbtn.rec{border-color:var(--warn);background:rgba(255,82,82,0.1);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+.vstatus{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+.vtx{margin:9px 12px 0;background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);padding:9px;font-family:'DM Mono',monospace;font-size:12px;min-height:38px;display:none;line-height:1.5;}
+.la{display:flex;align-items:center;justify-content:space-between;padding:9px 12px 12px;}
+.hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);}
+.btn-az{background:var(--cal);color:#0c0c10;border:none;padding:9px 20px;border-radius:var(--rs);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;-webkit-appearance:none;transition:opacity 0.15s;}
+.btn-az:active{opacity:0.8;}
+.btn-az:disabled{opacity:0.35;cursor:not-allowed;}
+.hl{padding:7px 12px 12px;display:flex;flex-direction:column;gap:6px;}
+.hi{background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);padding:9px 11px;display:flex;align-items:center;gap:9px;}
+.hi-info{flex:1;min-width:0;}
+.hi-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hi-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+.hi-nums{font-family:'DM Mono',monospace;font-size:10px;text-align:right;line-height:1.7;flex-shrink:0;}
+.hc{color:var(--cal);}.hp{color:var(--prot);}
+.hi-add{width:26px;height:26px;border-radius:50%;border:1px solid var(--bd);background:none;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hi-add:active{border-color:var(--cal);color:var(--cal);}
+.air{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r);padding:13px;margin-bottom:12px;display:none;animation:sd 0.2s ease;}
+@keyframes sd{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.air.on{display:block;}
+.air-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.air-ttl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.aichip{background:var(--cal-d);color:var(--cal);border:1px solid rgba(212,240,68,0.2);padding:2px 6px;border-radius:4px;font-size:9px;}
+.air-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px;}
+.anv{font-size:17px;font-weight:700;}
+.anv.c{color:var(--cal);}.anv.p{color:var(--prot);}.anv.f{color:var(--fat);}.anv.fi{color:var(--fiber);}
+.anl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px;}
+.air-desc{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+.egrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:9px;}
+.ef label{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.1em;}
+.ef input{width:100%;background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--txt);font-family:'DM Mono',monospace;font-size:14px;font-weight:600;padding:7px 9px;outline:none;-webkit-appearance:none;}
+.air-acts{display:flex;gap:7px;}
+.btn-ok{flex:1;background:var(--fiber);color:#0c0c10;border:none;padding:11px;border-radius:var(--rs);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;-webkit-appearance:none;}
+.btn-ok:active{opacity:0.85;}
+.btn-no{background:none;border:1px solid var(--bd);color:var(--muted);padding:11px 14px;border-radius:var(--rs);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;-webkit-appearance:none;}
+.meals{display:flex;flex-direction:column;gap:7px;}
+.mc{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:11px 13px;animation:fi 0.2s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+.mc-top{display:flex;align-items:flex-start;gap:8px;}
+.mbadge{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;padding:3px 6px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+.mbadge.breakfast{background:rgba(255,193,40,0.12);color:#ffc128;}
+.mbadge.lunch{background:var(--fiber-d);color:var(--fiber);}
+.mbadge.dinner{background:var(--prot-d);color:var(--prot);}
+.mbadge.snack{background:var(--fat-d);color:var(--fat);}
+.mc-body{flex:1;min-width:0;}
+.mc-desc{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:1px;}
+.mc-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;font-style:italic;}
+.mc-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);}
+.mc-acts{display:flex;gap:4px;flex-shrink:0;}
+.mab{background:none;border:1px solid var(--bd);border-radius:5px;color:var(--muted);font-size:12px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mab:active{border-color:var(--prot);color:var(--prot);}
+.mab.del:active{border-color:var(--warn);color:var(--warn);}
+.mc-macros{display:flex;gap:10px;margin-top:9px;padding-top:9px;border-top:1px solid var(--bd);}
+.mm{display:flex;flex-direction:column;gap:1px;}
+.mmv{font-size:12px;font-weight:700;}
+.mml{font-family:'DM Mono',monospace;font-size:8px;color:var(--dim);}
+.mm.cal .mmv{color:var(--cal);font-size:14px;}
+.mm.prot .mmv{color:var(--prot);}
+.mm.fat .mmv{color:var(--fat);}
+.mm.fiber .mmv{color:var(--fiber);}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.overlay.on{display:flex;}
+.modal{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r) var(--r) 0 0;padding:18px 14px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:640px;animation:su 0.22s ease;}
+@keyframes su{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-title{font-size:14px;font-weight:700;margin-bottom:13px;}
+.mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:11px;}
+.mf label{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.1em;}
+.mf input,.mf textarea{width:100%;background:var(--sur2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--txt);font-family:'DM Mono',monospace;font-size:13px;padding:7px 9px;outline:none;-webkit-appearance:none;}
+.mf textarea{resize:none;height:52px;grid-column:span 2;}
+.macts{display:flex;gap:7px;}
+.btn-sv{flex:1;background:var(--prot);color:#0c0c10;border:none;padding:11px;border-radius:var(--rs);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+.btn-cn{background:none;border:1px solid var(--bd);color:var(--muted);padding:11px 18px;border-radius:var(--rs);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;}
+.wp{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-top:18px;}
+.wp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.wp-title{font-size:12px;font-weight:700;}
+.wp-stats{display:flex;gap:11px;}
+.wst{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.wst span{color:var(--txt);}
+.wbars{display:flex;gap:5px;align-items:flex-end;height:52px;}
+.wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;}
+.wbw{flex:1;width:100%;background:var(--sur2);border-radius:3px;display:flex;align-items:flex-end;overflow:hidden;}
+.wb{width:100%;border-radius:3px 3px 0 0;transition:height 0.5s cubic-bezier(0.4,0,0.2,1);}
+.wb.over{background:var(--warn);}
+.wb.good{background:var(--cal);opacity:0.6;}
+.wb.low{background:var(--bd2);}
+.wb.today{background:var(--cal);}
+.wlbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;}
+.wd.cur .wlbl{color:var(--cal);}
+.sumbox{background:var(--sur);border:1px solid var(--bd);border-left:2px solid var(--cal);border-radius:var(--r);padding:12px 14px;margin-top:14px;}
+.sumlbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
+.sumtxt{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6;}
+.btn-gen{margin-top:8px;background:none;border:1px solid var(--bd);border-radius:var(--rs);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;padding:5px 13px;cursor:pointer;transition:all 0.2s;}
+.btn-gen:active{border-color:var(--cal);color:var(--cal);}
+.btn-gen:disabled{opacity:0.4;cursor:not-allowed;}
+.dots{display:inline-flex;gap:4px;align-items:center;}
+.dots span{width:4px;height:4px;border-radius:50%;background:var(--cal);animation:dp 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:0.2s;}.dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes dp{0%,60%,100%{opacity:0.3;transform:scale(0.8);}30%{opacity:1;transform:scale(1);}}
+.empty{text-align:center;padding:28px 12px;color:var(--dim);font-family:'DM Mono',monospace;font-size:11px;}
+.ei{font-size:24px;margin-bottom:6px;opacity:0.3;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--sur2);border:1px solid var(--bd2);border-radius:var(--rs);padding:8px 15px;font-family:'DM Mono',monospace;font-size:11px;color:var(--txt);z-index:200;transition:opacity 0.3s;opacity:0;pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;}
+.toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">fuel</div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="date-str" id="date-str"></div>
+      <div class="sync-dot" id="sync-dot"></div>
+    </div>
+  </div>
+
+  <div class="big-bars">
+    <div class="big-bar cal">
+      <div class="big-bar-top">
+        <div><div class="big-bar-label">Calories</div>
+        <div class="big-bar-nums"><div class="big-bar-val" id="v-cal">0</div><div class="big-bar-target">/ 2,100</div></div></div>
+        <div class="big-bar-pct" id="p-cal">0%</div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="b-cal" style="width:0%"></div></div>
+    </div>
+    <div class="big-bar prot">
+      <div class="big-bar-top">
+        <div><div class="big-bar-label">Protein</div>
+        <div class="big-bar-nums"><div class="big-bar-val" id="v-prot">0g</div><div class="big-bar-target">/ 150g</div></div></div>
+        <div class="big-bar-pct" id="p-prot">0%</div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="b-prot" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="mini-grid">
+    <div class="mini-card fat">
+      <div class="mini-label">Fat</div><div class="mini-val" id="v-fat">0g</div>
+      <div class="mini-sub" id="p-fat">0% of 70g</div>
+      <div class="mini-track"><div class="mini-fill" id="b-fat" style="width:0%"></div></div>
+    </div>
+    <div class="mini-card fiber">
+      <div class="mini-label">Fiber</div><div class="mini-val" id="v-fiber">0g</div>
+      <div class="mini-sub" id="p-fiber">0% of 35g</div>
+      <div class="mini-track"><div class="mini-fill" id="b-fiber" style="width:0%"></div></div>
+    </div>
+    <div class="mini-card water">
+      <div class="mini-label">Water</div><div class="mini-val" id="v-water">0</div>
+      <div class="mini-sub" id="p-water">0 of 8 cups</div>
+      <div class="mini-track"><div class="mini-fill" id="b-water" style="width:0%"></div></div>
+      <div class="water-btns">
+        <button class="wbtn" onclick="addWater(1)">+1</button>
+        <button class="wbtn" onclick="addWater(-1)">-1</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <div class="sbadge"><div class="sdot" id="sdot"></div><span class="slbl">Today:</span><span id="stext">No data yet</span></div>
+    <div class="sbadge" style="flex:0;white-space:nowrap;">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Deficit: <span id="wdef" style="color:var(--fiber)">—</span></span>
+    </div>
+  </div>
+
+  <div class="assessment" id="assessment">
+    <div class="a-top"><div class="a-icon" id="a-icon"></div><div class="a-status" id="a-status"></div></div>
+    <div class="a-note" id="a-note"></div>
+  </div>
+
+  <div class="sec">Log a Meal</div>
+  <div class="log-panel">
+    <div class="log-tabs">
+      <button class="log-tab active" onclick="switchTab('text',this)">✏️ Describe</button>
+      <button class="log-tab" onclick="switchTab('photo',this)">📷 Photo</button>
+      <button class="log-tab" onclick="switchTab('voice',this)">🎙 Voice</button>
+      <button class="log-tab" onclick="switchTab('history',this)">⚡ Recent</button>
+    </div>
+    <div class="log-pane active" id="pane-text">
+      <div class="chips" id="ch-text">
+        <button class="chip active" onclick="setType('text','breakfast',this)">Breakfast</button>
+        <button class="chip" onclick="setType('text','lunch',this)">Lunch</button>
+        <button class="chip" onclick="setType('text','dinner',this)">Dinner</button>
+        <button class="chip" onclick="setType('text','snack',this)">Snack</button>
+      </div>
+      <div class="iw">
+        <textarea class="ti" id="t-input" placeholder="e.g. HomeChef chicken tikka masala, 2/3 portion. Subbed kielbasa."></textarea>
+        <textarea class="ni" id="t-notes" placeholder="Notes (optional)..."></textarea>
+      </div>
+      <div class="la"><span class="hint">mention portion &amp; mods</span><button class="btn-az" id="btn-text" onclick="analyzeText()">Analyze →</button></div>
+    </div>
+    <div class="log-pane" id="pane-photo">
+      <div class="chips" id="ch-photo">
+        <button class="chip active" onclick="setType('photo','breakfast',this)">Breakfast</button>
+        <button class="chip" onclick="setType('photo','lunch',this)">Lunch</button>
+        <button class="chip" onclick="setType('photo','dinner',this)">Dinner</button>
+        <button class="chip" onclick="setType('photo','snack',this)">Snack</button>
+      </div>
+      <div class="iw">
+        <div class="pdrop"><input type="file" accept="image/*" id="p-input" onchange="handlePhoto(event)"><div style="font-size:24px">📸</div><p>Tap to upload photo</p><small>JPEG · PNG · HEIC</small></div>
+        <div class="pprev" id="pprev"><img id="pimg" src="" alt=""></div>
+        <textarea class="ni" id="p-notes" placeholder="Add context... e.g. HomeChef meal name, ate 3/4"></textarea>
+      </div>
+      <div class="la"><span class="hint" id="pname">No photo</span><button class="btn-az" id="btn-photo" onclick="analyzePhoto()" disabled>Analyze →</button></div>
+    </div>
+    <div class="log-pane" id="pane-voice">
+      <div class="chips" id="ch-voice">
+        <button class="chip active" onclick="setType('voice','breakfast',this)">Breakfast</button>
+        <button class="chip" onclick="setType('voice','lunch',this)">Lunch</button>
+        <button class="chip" onclick="setType('voice','dinner',this)">Dinner</button>
+        <button class="chip" onclick="setType('voice','snack',this)">Snack</button>
+      </div>
+      <div class="vc"><button class="vbtn" id="vbtn" onclick="toggleVoice()">🎙</button><div class="vstatus" id="vstatus">Tap to speak</div></div>
+      <div class="vtx" id="vtx"></div>
+      <div class="la"><span class="hint">speak naturally</span><button class="btn-az" id="btn-voice" onclick="analyzeVoice()" disabled>Analyze →</button></div>
+    </div>
+    <div class="log-pane" id="pane-history">
+      <div class="hl" id="hist-list"><div class="empty"><div class="ei">⚡</div>No history yet.</div></div>
+    </div>
+  </div>
+
+  <div class="air" id="air">
+    <div class="air-hdr">
+      <div class="air-ttl">AI Estimate <span class="aichip">CLAUDE</span></div>
+      <span id="ai-dots" style="display:none" class="dots"><span></span><span></span><span></span></span>
+    </div>
+    <div class="air-nums">
+      <div><div class="anv c" id="ai-cal">—</div><div class="anl">kcal</div></div>
+      <div><div class="anv p" id="ai-prot">—g</div><div class="anl">protein</div></div>
+      <div><div class="anv f" id="ai-fat">—g</div><div class="anl">fat</div></div>
+      <div><div class="anv fi" id="ai-fiber">—g</div><div class="anl">fiber</div></div>
+    </div>
+    <div class="air-desc" id="ai-desc"></div>
+    <div class="egrid">
+      <div class="ef"><label>Calories</label><input type="number" id="e-cal" inputmode="numeric"></div>
+      <div class="ef"><label>Protein (g)</label><input type="number" id="e-prot" inputmode="numeric"></div>
+      <div class="ef"><label>Fat (g)</label><input type="number" id="e-fat" inputmode="numeric"></div>
+      <div class="ef"><label>Fiber (g)</label><input type="number" id="e-fiber" inputmode="numeric"></div>
+    </div>
+    <div class="air-acts">
+      <button class="btn-ok" onclick="confirmEntry()">Add to Log ✓</button>
+      <button class="btn-no" onclick="discardEntry()">✕</button>
+    </div>
+  </div>
+
+  <div class="sec">Today's Log</div>
+  <div class="meals" id="meals-list"><div class="empty"><div class="ei">🍽</div>No meals yet today.</div></div>
+
+  <div class="wp">
+    <div class="wp-hdr"><div class="wp-title">This Week</div>
+    <div class="wp-stats"><div class="wst">Avg <span id="wavg">—</span></div><div class="wst">Days <span id="wdays">0</span>/7</div></div></div>
+    <div class="wbars" id="wbars"></div>
+  </div>
+
+  <div class="sumbox">
+    <div class="sumlbl">Daily Summary <span class="aichip">CLAUDE</span></div>
+    <div class="sumtxt" id="sum-text">Tap below to get your daily performance analysis.</div>
+    <button class="btn-gen" id="sum-btn" onclick="getDailySummary()">Generate summary →</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title">Edit Entry</div>
+    <div class="mgrid">
+      <div class="mf"><label>Calories</label><input type="number" id="m-cal" inputmode="numeric"></div>
+      <div class="mf"><label>Protein (g)</label><input type="number" id="m-prot" inputmode="numeric"></div>
+      <div class="mf"><label>Fat (g)</label><input type="number" id="m-fat" inputmode="numeric"></div>
+      <div class="mf"><label>Fiber (g)</label><input type="number" id="m-fiber" inputmode="numeric"></div>
+      <div class="mf"><label>Description</label><textarea id="m-desc"></textarea></div>
+    </div>
+    <div class="macts"><button class="btn-sv" onclick="saveEdit()">Save Changes</button><button class="btn-cn" onclick="closeModal()">Cancel</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY='https://fuel-proxy.joshh031.workers.dev';
+const SB_URL='https://vphqjxjphdsdpqaxqkpf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwaHFqeGpwaGRzZHBxYXhxa3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODE3NDIsImV4cCI6MjA4NzQ1Nzc0Mn0.FqKeUq05RihLNXVIpzvyTEAPmiSXZfYXGgTRCc0uYpE';
+const T={cal:2100,prot:150,fat:70,fiber:35,water:8};
+const WDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+let S={meals:[],water:0,pending:null,editId:null,mtype:{text:'breakfast',photo:'breakfast',voice:'breakfast'},photoData:null,voiceRec:null,isRec:false,voiceTxt:'',weekData:{}};
+const td=()=>new Date().toISOString().split('T')[0];
+
+const sb={
+  async get(table,filter){
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?${filter}&order=created_at.asc`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    return r.json();
+  },
+  async insert(table,data){
+    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(data)});
+    return r.json();
+  },
+  async update(table,filter,data){
+    const r=await fetch(`${SB_URL}/rest/v1/${table}?${filter}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(data)});
+    return r.json();
+  },
+  async delete(table,filter){
+    await fetch(`${SB_URL}/rest/v1/${table}?${filter}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  },
+  async upsert(table,data){
+    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(data)});
+    return r.json();
+  }
+};
+
+function setSyncStatus(s){
+  const d=document.getElementById('sync-dot');
+  d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':'');
+}
+
+async function loadToday(){
+  setSyncStatus('');
+  try{
+    const meals=await sb.get('meals',`date=eq.${td()}`);
+    if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
+    const water=await sb.get('water_log',`date=eq.${td()}`);
+    S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
+    await loadWeek();
+    setSyncStatus('ok');
+  }catch(e){setSyncStatus('err');}
+  updateDash();renderMeals();renderWeek();
+}
+
+async function loadWeek(){
+  S.weekData={};
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const s=d.toISOString().split('T')[0];
+    const meals=await sb.get('meals',`date=eq.${s}`);
+    if(Array.isArray(meals)&&meals.length>0){
+      S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};
+    }
+  }
+}
+
+function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.reduce((a,m)=>a+(m.prot||0),0),fat:S.meals.reduce((a,m)=>a+(m.fat||0),0),fiber:S.meals.reduce((a,m)=>a+(m.fiber||0),0)};}
+
+function init(){
+  const d=new Date();
+  document.getElementById('date-str').textContent=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+WDAYS[d.getDay()];
+  loadToday();
+}
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.log-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.log-pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+tab).classList.add('active');
+  if(tab==='history')renderHistory();
+}
+
+function setType(mode,type,btn){
+  S.mtype[mode]=type;
+  btn.closest('.chips').querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function addWater(n){
+  S.water=Math.max(0,Math.min(20,S.water+n));
+  updateDash();
+  try{await sb.upsert('water_log',{date:td(),cups:S.water});}catch(e){}
+}
+
+function handlePhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{S.photoData=ev.target.result;document.getElementById('pimg').src=S.photoData;document.getElementById('pprev').style.display='block';document.getElementById('pname').textContent=file.name;document.getElementById('btn-photo').disabled=false;};
+  r.readAsDataURL(file);
+}
+
+function toggleVoice(){S.isRec?stopVoice():startVoice();}
+function startVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('Speech not available in this browser');return;}
+  const r=new SR();r.continuous=true;r.interimResults=true;
+  S.voiceRec=r;S.isRec=true;
+  document.getElementById('vbtn').classList.add('rec');document.getElementById('vbtn').textContent='⏹';
+  document.getElementById('vstatus').textContent='Listening…';document.getElementById('vtx').style.display='block';
+  r.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;S.voiceTxt=t;document.getElementById('vtx').textContent=t;document.getElementById('btn-voice').disabled=false;};
+  r.onerror=r.onend=()=>stopVoice();r.start();
+}
+function stopVoice(){
+  S.isRec=false;try{S.voiceRec?.stop();}catch(e){}
+  document.getElementById('vbtn').classList.remove('rec');document.getElementById('vbtn').textContent='🎙';
+  document.getElementById('vstatus').textContent=S.voiceTxt?'Tap to re-record':'Tap to speak';
+}
+
+const SYS=`You are a nutrition estimator. Targets: 2100 cal, 150g protein, 70g fat, 35g fiber.
+Respond ONLY with valid JSON, no markdown:
+{"calories":<int>,"protein":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"}
+Estimate conservatively but realistically. Recognize HomeChef meal kit names and use their known nutrition. For any meal kit assume 600-900 cal per full serving, adjust for stated portion.`;
+const SUMSY=`You are a performance nutrition analyst. User targets: 2100 cal, 150g protein, 70g fat, 35g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering deficit/surplus status, protein adequacy, and one specific recommendation. No fluff.`;
+
+async function callAPI(messages,system){
+  const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:system||SYS,messages})});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message||'API error');
+  return data.content[0].text;
+}
+function parseJ(raw){return JSON.parse(raw.replace(/```json|```/g,'').trim());}
+
+async function analyzeText(){
+  const input=document.getElementById('t-input').value.trim();
+  if(!input){showToast('Enter a meal description first');return;}
+  const notes=document.getElementById('t-notes').value.trim();
+  showAI(true);const btn=document.getElementById('btn-text');btn.disabled=true;btn.textContent='…';
+  try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mtype.text}\nDescription: ${input}${notes?'\nNotes: '+notes:''}`}])),input,S.mtype.text,notes);}
+  catch(e){showToast('Analysis failed — check connection');hideAI();}
+  btn.disabled=false;btn.textContent='Analyze →';
+}
+
+async function analyzePhoto(){
+  if(!S.photoData)return;
+  showAI(true);const btn=document.getElementById('btn-photo');btn.disabled=true;btn.textContent='…';
+  try{
+    const b64=S.photoData.split(',')[1];const mime=(S.photoData.match(/data:([^;]+);/)||[])[1]||'image/jpeg';
+    const notes=document.getElementById('p-notes').value.trim();
+    showAIResult(parseJ(await callAPI([{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:`Meal type: ${S.mtype.photo}. ${notes||'Estimate macros from this meal photo.'}`}]}])),'Meal from photo',S.mtype.photo,notes);
+  }catch(e){showToast('Photo analysis failed');hideAI();}
+  btn.disabled=false;btn.textContent='Analyze →';
+}
+
+async function analyzeVoice(){
+  if(!S.voiceTxt)return;
+  showAI(true);const btn=document.getElementById('btn-voice');btn.disabled=true;btn.textContent='…';
+  try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mtype.voice}\nDescription: ${S.voiceTxt}`}])),S.voiceTxt,S.mtype.voice,'');}
+  catch(e){showToast('Analysis failed');hideAI();}
+  btn.disabled=false;btn.textContent='Analyze →';
+}
+
+async function getDailySummary(){
+  const t=totals();if(t.cal===0){showToast('Log some meals first');return;}
+  const btn=document.getElementById('sum-btn');btn.disabled=true;btn.textContent='Generating…';
+  document.getElementById('sum-text').textContent='';
+  try{
+    const text=await callAPI([{role:'user',content:`Today's intake: ${t.cal} cal (${Math.round(t.cal/T.cal*100)}% of target), ${t.prot}g protein (${Math.round(t.prot/T.prot*100)}%), ${t.fat}g fat, ${t.fiber}g fiber. Water: ${S.water} cups. Meals: ${S.meals.length}.`}],SUMSY);
+    document.getElementById('sum-text').textContent=text;document.getElementById('sum-text').style.color='var(--txt)';
+  }catch(e){showToast('Summary failed');}
+  btn.disabled=false;btn.textContent='Regenerate →';
+}
+
+function showAI(loading){document.getElementById('air').classList.add('on');document.getElementById('ai-dots').style.display=loading?'flex':'none';}
+function hideAI(){document.getElementById('air').classList.remove('on');S.pending=null;}
+function showAIResult(p,desc,type,notes){
+  document.getElementById('ai-dots').style.display='none';
+  document.getElementById('ai-cal').textContent=p.calories;document.getElementById('ai-prot').textContent=p.protein+'g';
+  document.getElementById('ai-fat').textContent=p.fat+'g';document.getElementById('ai-fiber').textContent=p.fiber+'g';
+  document.getElementById('ai-desc').textContent=p.description||desc;
+  document.getElementById('e-cal').value=p.calories;document.getElementById('e-prot').value=p.protein;
+  document.getElementById('e-fat').value=p.fat;document.getElementById('e-fiber').value=p.fiber;
+  S.pending={type,desc,notes:notes||'',cal:p.calories,prot:p.protein,fat:p.fat,fiber:p.fiber};
+}
+
+async function confirmEntry(){
+  if(!S.pending)return;
+  const entry={id:Date.now(),type:S.pending.type,desc:S.pending.desc,notes:S.pending.notes,
+    cal:parseInt(document.getElementById('e-cal').value)||0,prot:parseInt(document.getElementById('e-prot').value)||0,
+    fat:parseInt(document.getElementById('e-fat').value)||0,fiber:parseInt(document.getElementById('e-fiber').value)||0,
+    time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
+  S.meals.push(entry);updateDash();renderMeals();hideAI();resetInputs();
+  showToast(entry.cal+' kcal · '+entry.prot+'g protein added');
+  try{await sb.insert('meals',{id:entry.id,date:td(),meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}
+  catch(e){setSyncStatus('err');}
+}
+
+function discardEntry(){hideAI();}
+
+function resetInputs(){
+  document.getElementById('t-input').value='';document.getElementById('t-notes').value='';
+  document.getElementById('p-input').value='';document.getElementById('pprev').style.display='none';
+  document.getElementById('pname').textContent='No photo';document.getElementById('btn-photo').disabled=true;
+  document.getElementById('p-notes').value='';S.photoData=null;
+  document.getElementById('vtx').textContent='';document.getElementById('vtx').style.display='none';
+  S.voiceTxt='';document.getElementById('btn-voice').disabled=true;document.getElementById('vstatus').textContent='Tap to speak';
+}
+
+async function deleteMeal(id){
+  S.meals=S.meals.filter(m=>m.id!==id);updateDash();renderMeals();
+  try{await sb.delete('meals',`id=eq.${id}`);setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+}
+
+function openEdit(id){
+  const m=S.meals.find(m=>m.id===id);if(!m)return;S.editId=id;
+  document.getElementById('m-cal').value=m.cal;document.getElementById('m-prot').value=m.prot;
+  document.getElementById('m-fat').value=m.fat;document.getElementById('m-fiber').value=m.fiber;
+  document.getElementById('m-desc').value=m.desc;document.getElementById('overlay').classList.add('on');
+}
+
+async function saveEdit(){
+  const m=S.meals.find(m=>m.id===S.editId);if(!m)return;
+  m.cal=parseInt(document.getElementById('m-cal').value)||0;m.prot=parseInt(document.getElementById('m-prot').value)||0;
+  m.fat=parseInt(document.getElementById('m-fat').value)||0;m.fiber=parseInt(document.getElementById('m-fiber').value)||0;
+  m.desc=document.getElementById('m-desc').value;
+  updateDash();renderMeals();closeModal();showToast('Entry updated');
+  try{await sb.update('meals',`id=eq.${S.editId}`,{cal:m.cal,prot:m.prot,fat:m.fat,fiber:m.fiber,description:m.desc});setSyncStatus('ok');}
+  catch(e){setSyncStatus('err');}
+}
+
+function closeModal(){document.getElementById('overlay').classList.remove('on');S.editId=null;}
+
+function renderHistory(){
+  const list=document.getElementById('hist-list');
+  if(S.meals.length===0){list.innerHTML='<div class="empty"><div class="ei">⚡</div>No history yet.</div>';return;}
+  const seen=new Set(),unique=[];
+  [...S.meals].reverse().forEach(m=>{const k=m.desc.substring(0,40);if(!seen.has(k)){seen.add(k);unique.push(m);}});
+  list.innerHTML=unique.map(m=>`<div class="hi"><div class="hi-info"><div class="hi-name">${esc(m.desc.substring(0,52))}${m.desc.length>52?'…':''}</div><div class="hi-meta">${m.type} · ${m.time}</div></div><div class="hi-nums"><span class="hc">${m.cal}kcal</span><br><span class="hp">${m.prot}g P</span></div><button class="hi-add" onclick="quickAdd(${m.id})">+</button></div>`).join('');
+}
+
+async function quickAdd(id){
+  const src=S.meals.find(m=>m.id===id);if(!src)return;
+  const entry={...src,id:Date.now(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
+  S.meals.push(entry);updateDash();renderMeals();showToast('Re-added · '+entry.cal+' kcal');
+  try{await sb.insert('meals',{id:entry.id,date:td(),meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}
+  catch(e){setSyncStatus('err');}
+}
+
+function updateDash(){
+  const t=totals();
+  const cp=Math.min(Math.round(t.cal/T.cal*100),100);const pp=Math.min(Math.round(t.prot/T.prot*100),100);
+  document.getElementById('v-cal').textContent=t.cal;document.getElementById('p-cal').textContent=cp+'%';document.getElementById('b-cal').style.width=cp+'%';
+  document.getElementById('v-prot').textContent=t.prot+'g';document.getElementById('p-prot').textContent=pp+'%';document.getElementById('b-prot').style.width=pp+'%';
+  const fp=Math.min(Math.round(t.fat/T.fat*100),100);const fip=Math.min(Math.round(t.fiber/T.fiber*100),100);const wp=Math.min(Math.round(S.water/T.water*100),100);
+  document.getElementById('v-fat').textContent=t.fat+'g';document.getElementById('p-fat').textContent=fp+'% of 70g';document.getElementById('b-fat').style.width=fp+'%';
+  document.getElementById('v-fiber').textContent=t.fiber+'g';document.getElementById('p-fiber').textContent=fip+'% of 35g';document.getElementById('b-fiber').style.width=fip+'%';
+  document.getElementById('v-water').textContent=S.water;document.getElementById('p-water').textContent=S.water+' of 8 cups';document.getElementById('b-water').style.width=wp+'%';
+  const calPct=t.cal/T.cal;const protOk=t.prot>=130;
+  let status,dotColor,icon,aStatus,aNote;
+  if(t.cal===0){status='No data yet';dotColor='var(--dim)';icon='';aStatus='';aNote='';}
+  else if(calPct>1.05){status='Surplus';dotColor='var(--warn)';icon='⚠️';aStatus=protOk?'Surplus — muscle preserved':'Surplus — protein light';aNote=(t.cal-T.cal)+' kcal over. '+(protOk?'Protein solid.':'Aim for 130g+ protein.');}
+  else if(calPct>=0.92){status='Maintenance';dotColor='var(--prot)';icon='⚖️';aStatus=protOk?'Maintenance — muscle-protective':'Maintenance — boost protein';aNote=Math.abs(T.cal-t.cal)+' kcal '+(t.cal<T.cal?'below':'above')+' target. '+(protOk?'Protein on track.':'Protein at '+t.prot+'g — aim for 130g+.');}
+  else{status='Deficit';dotColor='var(--fiber)';icon=protOk?'🔥':'⚠️';aStatus=protOk?'Deficit — muscle-protective':'Deficit — protein light';aNote=(T.cal-t.cal)+' kcal deficit. '+(protOk?'Protein target met. Muscle protected.':'Protein at '+t.prot+'g — below threshold.');}
+  document.getElementById('stext').textContent=status;document.getElementById('sdot').style.background=dotColor;
+  const assess=document.getElementById('assessment');
+  if(t.cal>0){assess.classList.add('on');document.getElementById('a-icon').textContent=icon;document.getElementById('a-status').textContent=aStatus;document.getElementById('a-note').textContent=aNote;}
+  else{assess.classList.remove('on');}
+  S.weekData[td()]=t;
+  const wv=Object.values(S.weekData);const wCal=wv.reduce((a,d)=>a+(d.cal||0),0);const wDays=wv.filter(d=>d.cal>0).length;
+  if(wDays>0){const def=(T.cal*wDays)-wCal;const el=document.getElementById('wdef');el.textContent=(def>=0?'+':'')+Math.abs(def).toLocaleString()+' kcal';el.style.color=def>=0?'var(--fiber)':'var(--warn)';}
+}
+
+function renderMeals(){
+  const list=document.getElementById('meals-list');
+  if(S.meals.length===0){list.innerHTML='<div class="empty"><div class="ei">🍽</div>No meals yet today.</div>';return;}
+  list.innerHTML=S.meals.map(m=>`<div class="mc"><div class="mc-top"><span class="mbadge ${m.type}">${m.type}</span><div class="mc-body"><div class="mc-desc">${esc(m.desc)}</div>${m.notes?`<div class="mc-note">${esc(m.notes)}</div>`:''}<div class="mc-time">${m.time}</div></div><div class="mc-acts"><button class="mab" onclick="openEdit(${m.id})">✎</button><button class="mab del" onclick="deleteMeal(${m.id})">✕</button></div></div><div class="mc-macros"><div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div></div><div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div></div><div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div></div><div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div></div></div></div>`).join('');
+}
+
+function renderWeek(){
+  const bars=document.getElementById('wbars');const now=new Date();const days=[];
+  for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const s=d.toISOString().split('T')[0];days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
+  const maxCal=Math.max(T.cal*1.1,...days.map(d=>S.weekData[d.s]?.cal||0));
+  let totCal=0,logDays=0;
+  bars.innerHTML=days.map(day=>{
+    const cal=S.weekData[day.s]?.cal||0;const pct=cal>0?Math.round(cal/maxCal*100):0;
+    if(cal>0){totCal+=cal;logDays++;}
+    let cls='low';if(day.isToday)cls='today';else if(cal>T.cal+100)cls='over';else if(cal>=T.cal-300)cls='good';
+    return`<div class="wd${day.isToday?' cur':''}"><div class="wbw"><div class="wb ${cls}" style="height:${pct}%"></div></div><div class="wlbl">${day.label}</div></div>`;
+  }).join('');
+  document.getElementById('wavg').textContent=logDays>0?Math.round(totCal/logDays).toLocaleString():'—';
+  document.getElementById('wdays').textContent=logDays;
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2800);}
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+init();
+</script>
+</body>
+</html>
