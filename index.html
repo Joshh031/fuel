@@ -67,8 +67,8 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:10
 .quick-row{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
 .qbtn{background:var(--sur);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
 .qbtn:active{border-color:var(--cal);color:var(--cal);background:var(--cald)}
-.log-panel{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
-.log-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.log-panel{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);overflow:visible;margin-bottom:10px}
+.log-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:var(--r) var(--r) 0 0}
 .log-tabs::-webkit-scrollbar{display:none}
 .ltab{flex:1;min-width:64px;padding:9px 4px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--muted);font-family:var(--mono);font-size:9px;cursor:pointer;white-space:nowrap;text-align:center;letter-spacing:.04em}
 .ltab.active{color:var(--cal);border-bottom-color:var(--cal);background:var(--cald)}
@@ -147,8 +147,8 @@ textarea.ni::placeholder{color:var(--dim)}
 .mmv{font-family:var(--mono);font-size:11px;font-weight:700}
 .mml{font-family:var(--mono);font-size:7px;color:var(--dim)}
 .mm.cal .mmv{color:var(--cal);font-size:13px}.mm.prot .mmv{color:var(--prot)}.mm.fat .mmv{color:var(--fat)}.mm.fiber .mmv{color:var(--fiber)}
-.plan-box{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
-.plan-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.plan-box{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);overflow:visible;margin-bottom:10px}
+.plan-tabs{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:var(--r) var(--r) 0 0}
 .plan-tabs::-webkit-scrollbar{display:none}
 .ptab{flex:1;min-width:80px;padding:9px 4px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--muted);font-family:var(--mono);font-size:9px;cursor:pointer;white-space:nowrap;text-align:center}
 .ptab.active{color:var(--fiber);border-bottom-color:var(--fiber);background:var(--fiberd)}
