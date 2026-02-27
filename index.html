@@ -683,7 +683,7 @@ function openDrinkModal(){document.getElementById(‘drink-overlay’).classList
 function closeDrinkModal(){document.getElementById(‘drink-overlay’).classList.remove(‘on’);}
 document.getElementById(‘drink-overlay’).addEventListener(‘click’,function(e){if(e.target===this)closeDrinkModal();});
 
-function initAlcohol(){setAlcCat(‘beer’,document.querySelector(’.alc-cat’));}
+function initAlcohol(){const b=document.querySelector(’.alc-cat’);if(b)setAlcCat(‘beer’,b);else{S.alcCat=‘beer’;const sel=document.getElementById(‘alc-select’);if(sel)sel.innerHTML=ALC.beer.map((a,i)=>`<option value="${i}">${a.name}</option>`).join(’’);}}
 function setAlcCat(cat,btn){
 S.alcCat=cat;
 document.querySelectorAll(’.alc-cat’).forEach(b=>b.classList.remove(‘active’));btn.classList.add(‘active’);
@@ -952,7 +952,7 @@ btn.disabled=false;btn.textContent=‘Regenerate →’;
 function esc(s){return String(s).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’);}
 function showToast(msg,dur){const t=document.getElementById(‘toast’);t.textContent=msg;t.classList.add(‘on’);clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove(‘on’),dur||2800);}
 
-init();
+try{init();}catch(e){console.error(‘FUEL init error:’,e);document.body.insertAdjacentHTML(‘afterbegin’,’<div style="background:red;color:white;padding:10px;position:fixed;top:0;left:0;right:0;z-index:9999;font-size:12px">Init error: ‘+e.message+’</div>’);}
 </script>
 
 </body>
