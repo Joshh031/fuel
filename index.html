@@ -539,7 +539,7 @@ function renderDateNav(){
 const d=new Date(S.activeDate+‘T12:00:00’);
 const today=td();
 const isT=S.activeDate===today;
-const y=new Date();y.setDate(y.getDate()-1);const yStr=y.toISOString().split(‘T’)[0];
+const y=new Date();y.setDate(y.getDate()-1);const yStr=y.getFullYear()+’-’+String(y.getMonth()+1).padStart(2,‘0’)+’-’+String(y.getDate()).padStart(2,‘0’);
 let label=isT?‘Today’:S.activeDate===yStr?‘Yesterday’:d.toLocaleDateString(‘en-US’,{weekday:‘long’});
 let sub=d.toLocaleDateString(‘en-US’,{month:‘short’,day:‘numeric’,year:‘numeric’});
 document.getElementById(‘dnav-label’).textContent=label;
@@ -547,11 +547,11 @@ document.getElementById(‘dnav-sub’).textContent=sub;
 document.getElementById(‘dnav-next’).disabled=isT;
 const tb=document.getElementById(‘dnav-today’);
 tb.className=‘dnav-today’+(isT?’’:’ on’);
-document.getElementById(‘log-label’).textContent=isT?“Today’s Log”:label+”’s Log”;
+document.getElementById(‘log-label’).textContent=isT?“Today’s Log”:label+”‘s Log”;
 }
 function shiftDate(n){
 const d=new Date(S.activeDate+‘T12:00:00’);d.setDate(d.getDate()+n);
-const nd=d.toISOString().split(‘T’)[0];
+const nd=d.getFullYear()+’-’+String(d.getMonth()+1).padStart(2,‘0’)+’-’+String(d.getDate()).padStart(2,‘0’);
 if(nd>td())return;
 S.activeDate=nd;renderDateNav();loadDay();
 }
@@ -574,7 +574,7 @@ if(isToday())renderWeek();
 async function loadWeek(){
 S.weekData={};
 for(let i=6;i>=0;i–){
-const d=new Date();d.setDate(d.getDate()-i);const s=d.toISOString().split(‘T’)[0];
+const d=new Date();d.setDate(d.getDate()-i);const s=d.getFullYear()+’-’+String(d.getMonth()+1).padStart(2,‘0’)+’-’+String(d.getDate()).padStart(2,‘0’);
 try{const meals=await sb.get(‘meals’,`date=eq.${s}`);if(Array.isArray(meals)&&meals.length>0){S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};}}catch(e){}
 }
 }
@@ -633,7 +633,7 @@ function renderWeek(){
 const bars=document.getElementById(‘wbars’);
 const now=new Date();
 const days=[];
-for(let i=6;i>=0;i–){const d=new Date(now);d.setDate(now.getDate()-i);const s=d.toISOString().split(‘T’)[0];days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
+for(let i=6;i>=0;i–){const d=new Date(now);d.setDate(now.getDate()-i);const s=d.getFullYear()+’-’+String(d.getMonth()+1).padStart(2,‘0’)+’-’+String(d.getDate()).padStart(2,‘0’);days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
 const maxCal=Math.max(T.cal*1.1,…days.map(d=>S.weekData[d.s]?.cal||0));
 let totCal=0,logDays=0;
 bars.innerHTML=days.map(day=>{
