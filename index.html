@@ -240,8 +240,8 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .sumtxt{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.6}
 .btn-gen{margin-top:7px;background:none;border:1px solid var(--bd);border-radius:var(--rs);color:var(--muted);font-family:var(--mono);font-size:9px;padding:4px 12px;cursor:pointer}
 .btn-gen:active{border-color:var(--cal);color:var(--cal)}.btn-gen:disabled{opacity:.4;cursor:not-allowed}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none;align-items:flex-end;justify-content:center}
-.overlay.on{display:flex}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none;align-items:flex-end;justify-content:center;pointer-events:none}
+.overlay.on{display:flex;pointer-events:all}
 .modal{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r) var(--r) 0 0;padding:16px 13px calc(16px + env(safe-area-inset-bottom));width:100%;max-width:600px;animation:su .22s ease}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .modal-title{font-size:13px;font-weight:600;margin-bottom:12px}
@@ -276,8 +276,8 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sur2);border:1px solid var(--bd2);border-radius:var(--rs);padding:7px 14px;font-family:var(--mono);font-size:10px;color:var(--txt);z-index:200;transition:opacity .3s;opacity:0;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 /* MISSED MEAL MODAL */
-.mm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:center;justify-content:center;padding:20px}
-.mm-overlay.on{display:flex}
+.mm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:center;justify-content:center;padding:20px;pointer-events:none}
+.mm-overlay.on{display:flex;pointer-events:all}
 .mm-box{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r);width:100%;max-width:480px;overflow:hidden;animation:slideup .25s ease}
 .mm-hdr{background:var(--warn);padding:14px 16px;display:flex;align-items:center;gap:8px}
 .mm-icon{font-size:20px}
