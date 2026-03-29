@@ -34,13 +34,13 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:10
 .bb-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .bb-nums{display:flex;align-items:baseline;gap:4px}
 .bb-val{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
-.big-bar.cal .bb-val{color:var(--cal)}.big-bar.prot .bb-val{color:var(--prot)}
+.big-bar.cal .bb-val{color:var(--cal)}.big-bar.prot .bb-val{color:var(--prot)}.big-bar.carb .bb-val{color:var(--carb)}.big-bar.fat .bb-val{color:var(--fat)}
 .bb-tgt{font-family:var(--mono);font-size:10px;color:var(--dim)}
 .bb-pct{font-family:var(--mono);font-size:22px;font-weight:700}
-.big-bar.cal .bb-pct{color:var(--cal)}.big-bar.prot .bb-pct{color:var(--prot)}
+.big-bar.cal .bb-pct{color:var(--cal)}.big-bar.prot .bb-pct{color:var(--prot)}.big-bar.carb .bb-pct{color:var(--carb)}.big-bar.fat .bb-pct{color:var(--fat)}
 .btrack{height:5px;background:var(--sur2);border-radius:3px;overflow:hidden}
 .bfill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
-.big-bar.cal .bfill{background:var(--cal)}.big-bar.prot .bfill{background:var(--prot)}
+.big-bar.cal .bfill{background:var(--cal)}.big-bar.prot .bfill{background:var(--prot)}.big-bar.carb .bfill{background:var(--carb)}.big-bar.fat .bfill{background:var(--fat)}
 .mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:9px}
 .mc2{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:10px}
 .mc2-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
@@ -275,6 +275,20 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sur2);border:1px solid var(--bd2);border-radius:var(--rs);padding:7px 14px;font-family:var(--mono);font-size:10px;color:var(--txt);z-index:200;transition:opacity .3s;opacity:0;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 
+/* WATER NUDGE BANNER */
+.water-nudge{background:var(--waterd);border:1px solid rgba(34,200,240,.25);border-radius:var(--rs);padding:8px 12px;margin-bottom:9px;display:none;align-items:center;gap:8px;animation:fu .2s ease}
+.water-nudge.on{display:flex}
+.water-nudge-icon{font-size:16px;flex-shrink:0}
+.water-nudge-txt{font-family:var(--mono);font-size:10px;color:var(--water);flex:1;line-height:1.4}
+.water-nudge-close{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0}
+.water-pace{font-family:var(--mono);font-size:8px;margin-top:3px;line-height:1.3}
+.water-pace.behind{color:var(--fat)}.water-pace.ahead{color:var(--fiber)}.water-pace.on-pace{color:var(--muted)}
+
+/* FLOATING WATER BUTTON */
+.fab-water{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));right:16px;width:48px;height:48px;border-radius:50%;background:var(--water);border:none;color:#0d0d0f;font-size:18px;font-weight:700;cursor:pointer;z-index:50;box-shadow:0 2px 12px rgba(34,200,240,.35);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .15s,box-shadow .15s}
+.fab-water:active{transform:scale(.92);box-shadow:0 1px 6px rgba(34,200,240,.2)}
+.fab-water .fab-count{position:absolute;top:-4px;right:-4px;background:var(--sur);border:1px solid var(--water);border-radius:8px;font-family:var(--mono);font-size:8px;color:var(--water);padding:1px 5px;font-weight:600}
+
 /* MACRO RATIO BAR */
 .macro-split{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:9px}
 .ms-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
@@ -327,6 +341,11 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <button class="dnav-btn" id="dnav-next" onclick="shiftDate(1)">&#8250;</button>
     </div>
   </div>
+  <div class="water-nudge" id="water-nudge">
+    <div class="water-nudge-icon">&#128167;</div>
+    <div class="water-nudge-txt" id="water-nudge-txt">You haven't logged any water today.</div>
+    <button class="water-nudge-close" onclick="dismissWaterNudge()">&#10005;</button>
+  </div>
   <div class="big-bars">
     <div class="big-bar cal">
       <div class="bb-top">
@@ -342,12 +361,24 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       </div>
       <div class="btrack"><div class="bfill" id="b-prot" style="width:0%"></div></div>
     </div>
+    <div class="big-bar carb">
+      <div class="bb-top">
+        <div><div class="bb-lbl">Carbs</div><div class="bb-nums"><div class="bb-val" id="v-carb">0g</div><div class="bb-tgt">/ 180g</div></div></div>
+        <div class="bb-pct" id="p-carb">0%</div>
+      </div>
+      <div class="btrack"><div class="bfill" id="b-carb" style="width:0%"></div></div>
+    </div>
+    <div class="big-bar fat">
+      <div class="bb-top">
+        <div><div class="bb-lbl">Fat</div><div class="bb-nums"><div class="bb-val" id="v-fat">0g</div><div class="bb-tgt">/ 70g</div></div></div>
+        <div class="bb-pct" id="p-fat">0%</div>
+      </div>
+      <div class="btrack"><div class="bfill" id="b-fat" style="width:0%"></div></div>
+    </div>
   </div>
   <div class="mini-grid">
-    <div class="mc2 fat"><div class="mc2-lbl">Fat</div><div class="mc2-val" id="v-fat">0g</div><div class="mc2-sub" id="p-fat">0% of 70g</div><div class="mtrack"><div class="mfill" id="b-fat" style="width:0%"></div></div></div>
-    <div class="mc2 carb"><div class="mc2-lbl">Carbs</div><div class="mc2-val" id="v-carb">0g</div><div class="mc2-sub" id="p-carb">0% of 180g</div><div class="mtrack"><div class="mfill" id="b-carb" style="width:0%"></div></div></div>
     <div class="mc2 fiber"><div class="mc2-lbl">Fiber</div><div class="mc2-val" id="v-fiber">0g</div><div class="mc2-sub" id="p-fiber">0% of 35g</div><div class="mtrack"><div class="mfill" id="b-fiber" style="width:0%"></div></div></div>
-    <div class="mc2 water"><div class="mc2-lbl">Water</div><div class="mc2-val" id="v-water">0</div><div class="mc2-sub" id="p-water">0 of 8</div><div class="mtrack"><div class="mfill" id="b-water" style="width:0%"></div></div><div class="wbtns"><button class="wbtn" onclick="addWater(1)">+1</button><button class="wbtn" onclick="addWater(-1)">-1</button></div></div>
+    <div class="mc2 water"><div class="mc2-lbl">Water</div><div class="mc2-val" id="v-water">0</div><div class="mc2-sub" id="p-water">0 of 8</div><div class="mtrack"><div class="mfill" id="b-water" style="width:0%"></div></div><div class="water-pace on-pace" id="water-pace"></div><div class="wbtns"><button class="wbtn" onclick="addWater(1)">+1</button><button class="wbtn" onclick="addWater(-1)">-1</button></div></div>
   </div>
   <div class="macro-split" id="macro-split" style="display:none">
     <div class="ms-lbl">Calorie Sources</div>
@@ -635,18 +666,21 @@ document.getElementById('b-cal').style.width=pct(t.cal,T.cal)+'%';
 document.getElementById('v-prot').textContent=t.prot+'g';
 document.getElementById('p-prot').textContent=pct(t.prot,T.prot)+'%';
 document.getElementById('b-prot').style.width=pct(t.prot,T.prot)+'%';
-document.getElementById('v-fat').textContent=t.fat+'g';
-document.getElementById('p-fat').textContent=pct(t.fat,T.fat)+'% of 70g';
-document.getElementById('b-fat').style.width=pct(t.fat,T.fat)+'%';
 document.getElementById('v-carb').textContent=t.carb+'g';
-document.getElementById('p-carb').textContent=pct(t.carb,T.carb)+'% of 180g';
+document.getElementById('p-carb').textContent=pct(t.carb,T.carb)+'%';
 document.getElementById('b-carb').style.width=pct(t.carb,T.carb)+'%';
+document.getElementById('v-fat').textContent=t.fat+'g';
+document.getElementById('p-fat').textContent=pct(t.fat,T.fat)+'%';
+document.getElementById('b-fat').style.width=pct(t.fat,T.fat)+'%';
 document.getElementById('v-fiber').textContent=t.fiber+'g';
 document.getElementById('p-fiber').textContent=pct(t.fiber,T.fiber)+'% of 35g';
 document.getElementById('b-fiber').style.width=pct(t.fiber,T.fiber)+'%';
 document.getElementById('v-water').textContent=S.water;
 document.getElementById('p-water').textContent=S.water+' of 8';
 document.getElementById('b-water').style.width=pct(S.water,T.water)+'%';
+// Water pace + nudge + fab
+document.getElementById('fab-count').textContent=S.water;
+updateWaterPace();
 // Macro ratio bar
 const pCal=t.prot*4,cCal=t.carb*4,fCal=t.fat*9;
 const totalMacCal=pCal+cCal+fCal;
@@ -696,6 +730,33 @@ document.getElementById('a-note').textContent=anote;
 } else {a.classList.remove('on');}
 if(isToday()&&S.weekData){S.weekData[S.activeDate]={cal:t.cal,prot:t.prot,carb:t.carb,fat:t.fat,fiber:t.fiber};}
 }
+
+let waterNudgeDismissed=false;
+function updateWaterPace(){
+if(!isToday()){document.getElementById('water-pace').textContent='';document.getElementById('water-nudge').classList.remove('on');return;}
+const now=new Date();
+const hour=now.getHours()+(now.getMinutes()/60);
+// Assume waking hours 7am-11pm (16 hrs), pace = 8 cups over 16 hrs
+const wakeStart=7,wakeEnd=23,totalHrs=wakeEnd-wakeStart;
+const elapsed=Math.max(0,Math.min(totalHrs,hour-wakeStart));
+const expected=Math.round(elapsed/totalHrs*T.water*10)/10;
+const expectedInt=Math.round(expected);
+const diff=S.water-expectedInt;
+const paceEl=document.getElementById('water-pace');
+if(diff>=1){paceEl.textContent='+'+diff+' ahead of pace';paceEl.className='water-pace ahead';}
+else if(diff<=-2){paceEl.textContent=Math.abs(diff)+' cups behind pace';paceEl.className='water-pace behind';}
+else if(diff<0){paceEl.textContent=Math.abs(diff)+' behind pace';paceEl.className='water-pace behind';}
+else{paceEl.textContent='on pace';paceEl.className='water-pace on-pace';}
+// Nudge banner
+const nudgeEl=document.getElementById('water-nudge');
+if(waterNudgeDismissed){nudgeEl.classList.remove('on');return;}
+const txt=document.getElementById('water-nudge-txt');
+if(hour>=12&&S.water===0){txt.textContent="It's past noon and you haven't logged any water today.";nudgeEl.classList.add('on');}
+else if(hour>=18&&S.water<T.water/2){txt.textContent='Only '+S.water+'/'+T.water+' cups \u2014 you\'re behind. Drink up!';nudgeEl.classList.add('on');}
+else if(hour>=15&&diff<=-3){txt.textContent=Math.abs(diff)+' cups behind pace. Catch up before dinner!';nudgeEl.classList.add('on');}
+else{nudgeEl.classList.remove('on');}
+}
+function dismissWaterNudge(){waterNudgeDismissed=true;document.getElementById('water-nudge').classList.remove('on');}
 
 function mealFlag(m){
 if(!m.cal||m.cal<50)return'';
@@ -754,6 +815,7 @@ btn.classList.add('active');
 
 async function addWater(n){
 S.water=Math.max(0,Math.min(20,S.water+n));updateDash();
+if(n>0)showToast('\ud83d\udca7 '+S.water+'/'+T.water+' cups');
 try{await sb.upsert('water_log',{date:S.activeDate,cups:S.water});}catch(e){}
 }
 
@@ -1102,5 +1164,6 @@ init();
     </div>
   </div>
 </div>
+<button class="fab-water" id="fab-water" onclick="addWater(1)">&#128167;<span class="fab-count" id="fab-count">0</span></button>
 </body>
 </html>
