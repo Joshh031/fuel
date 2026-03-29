@@ -763,6 +763,7 @@ try{await sb.insert(‘meals’,{id:entry.id,date:S.activeDate,meal_type:entry.t
 
 function openDrinkModal(){document.getElementById(‘drink-overlay’).classList.add(‘on’);updateAlcPreview();}
 function closeDrinkModal(){document.getElementById(‘drink-overlay’).classList.remove(‘on’);}
+document.addEventListener(‘DOMContentLoaded’,function(){
 document.getElementById(‘drink-overlay’).addEventListener(‘click’,function(e){if(e.target===this)closeDrinkModal();});
 
 function initAlcohol(){setAlcCat(‘beer’,document.querySelector(’.alc-cat’));}
@@ -921,6 +922,8 @@ try{await sb.update(‘meals’,`id=eq.${S.editId}`,{cal:m.cal,prot:m.prot,fat:m
 }
 function closeEditModal(){document.getElementById(‘edit-overlay’).classList.remove(‘on’);S.editId=null;}
 document.getElementById(‘edit-overlay’).addEventListener(‘click’,function(e){if(e.target===this)closeEditModal();});
+init();
+});
 
 function renderHistory(){
 const list=document.getElementById(‘hist-list’);
@@ -1033,8 +1036,6 @@ btn.disabled=false;btn.textContent=‘Regenerate \u2192’;
 
 function esc(s){return String(s).replace(/&/g,’&’).replace(/</g,’<’).replace(/>/g,’>’).replace(/”/g,’"’);}
 function showToast(msg,dur){const t=document.getElementById(‘toast’);t.textContent=msg;t.classList.add(‘on’);clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove(‘on’),dur||2800);}
-
-init();
 </script>
 
 </body>
