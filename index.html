@@ -659,22 +659,23 @@ function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.
 
 function updateDash(){
 const t=totals();
-const pct=(v,max)=>Math.min(100,Math.round(v/max*100));
+const pct=(v,max)=>Math.round(v/max*100);
+const barPct=(v,max)=>Math.min(100,pct(v,max));
 document.getElementById('v-cal').textContent=t.cal.toLocaleString();
 document.getElementById('p-cal').textContent=pct(t.cal,T.cal)+'%';
-document.getElementById('b-cal').style.width=pct(t.cal,T.cal)+'%';
+document.getElementById('b-cal').style.width=barPct(t.cal,T.cal)+'%';
 document.getElementById('v-prot').textContent=t.prot+'g';
 document.getElementById('p-prot').textContent=pct(t.prot,T.prot)+'%';
-document.getElementById('b-prot').style.width=pct(t.prot,T.prot)+'%';
+document.getElementById('b-prot').style.width=barPct(t.prot,T.prot)+'%';
 document.getElementById('v-carb').textContent=t.carb+'g';
 document.getElementById('p-carb').textContent=pct(t.carb,T.carb)+'%';
-document.getElementById('b-carb').style.width=pct(t.carb,T.carb)+'%';
+document.getElementById('b-carb').style.width=barPct(t.carb,T.carb)+'%';
 document.getElementById('v-fat').textContent=t.fat+'g';
 document.getElementById('p-fat').textContent=pct(t.fat,T.fat)+'%';
-document.getElementById('b-fat').style.width=pct(t.fat,T.fat)+'%';
+document.getElementById('b-fat').style.width=barPct(t.fat,T.fat)+'%';
 document.getElementById('v-fiber').textContent=t.fiber+'g';
 document.getElementById('p-fiber').textContent=pct(t.fiber,T.fiber)+'% of 35g';
-document.getElementById('b-fiber').style.width=pct(t.fiber,T.fiber)+'%';
+document.getElementById('b-fiber').style.width=barPct(t.fiber,T.fiber)+'%';
 document.getElementById('v-water').textContent=S.water;
 document.getElementById('p-water').textContent=S.water+' of 8';
 document.getElementById('b-water').style.width=pct(S.water,T.water)+'%';
