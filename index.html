@@ -601,7 +601,7 @@ const td=()=>fmtDate(new Date());
 const isToday=()=>S.activeDate===td();
 
 const sb={
-async get(t,f){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}&order=created_at.asc`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});return r.json();},
+async get(t,f,ord){const q=ord?`${f}&order=${ord}`:f;const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});return r.json();},
 async insert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
 async update(t,f,d){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
 async del(t,f){await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});},
@@ -636,7 +636,7 @@ function goToday(){S.activeDate=td();renderDateNav();loadDay();}
 async function loadDay(){
 setSyncStatus('');S.meals=[];S.water=0;
 try{
-const meals=await sb.get('meals',`date=eq.${S.activeDate}`);
+const meals=await sb.get('meals',`date=eq.${S.activeDate}`,'created_at.asc');
 if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
 const water=await sb.get('water_log',`date=eq.${S.activeDate}`);
 S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
@@ -651,7 +651,7 @@ async function loadWeek(){
 S.weekData={};
 for(let i=6;i>=0;i--){
 const d=new Date();d.setDate(d.getDate()-i);const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-try{const meals=await sb.get('meals',`date=eq.${s}`);if(Array.isArray(meals)&&meals.length>0){S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),carb:meals.reduce((a,m)=>a+(m.carb||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};}}catch(e){}
+try{const meals=await sb.get('meals',`date=eq.${s}`,'created_at.asc');if(Array.isArray(meals)&&meals.length>0){S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),carb:meals.reduce((a,m)=>a+(m.carb||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};}}catch(e){}
 }
 }
 
@@ -1112,7 +1112,7 @@ d.setDate(d.getDate()-i);
 const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const label=i===1?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
 try{
-const meals=await sb.get('meals','date=eq.'+dateStr);
+const meals=await sb.get('meals','date=eq.'+dateStr,'created_at.asc');
 if(!Array.isArray(meals))continue;
 const logged=new Set(meals.map(function(m){return m.meal_type;}));
 SLOTS.forEach(function(slot){
