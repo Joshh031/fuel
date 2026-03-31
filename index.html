@@ -576,7 +576,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 const PROXY='https://fuel-proxy.joshh031.workers.dev';
 const SB_URL='https://vphqjxjphdsdpqaxqkpf.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwaHFqeGpwaGRzZHBxYXhxa3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODE3NDIsImV4cCI6MjA4NzQ1Nzc0Mn0.FqKeUq05RihLNXVIpzvyTEAPmiSXZfYXGgTRCc0uYpE';
-const T={cal:2100,prot:150,carb:180,fat:70,fiber:35,water:8};
+const T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
 const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
 
 const PRESETS={
@@ -892,9 +892,9 @@ document.getElementById('vbtn').classList.remove('rec');document.getElementById(
 document.getElementById('vstatus').textContent=S.voiceTxt?'Tap to re-record':'Tap to speak';
 }
 
-const SYS=`You are a nutrition estimator. Targets: 2100 cal, 150g protein, 180g carbs, 70g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"calories":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"} Estimate conservatively but realistically. Recognize HomeChef meal kit names. For meal kits assume 600-900 cal per full serving, adjust for stated portion. Flag if protein-to-calorie ratio is poor (below 25g protein per 400 cal).`;
+const SYS=`You are a nutrition estimator. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"calories":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"} Estimate conservatively but realistically. Recognize HomeChef meal kit names. For meal kits assume 600-900 cal per full serving, adjust for stated portion. Flag if protein-to-calorie ratio is poor (below 25g protein per 400 cal).`;
 
-const SUMSY=`You are a performance nutrition analyst. User targets: 2100 cal, 150g protein, 180g carbs, 70g fat, 35g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;
+const SUMSY=`You are a performance nutrition analyst. User targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;
 
 async function callAPI(messages,system){
 const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:system||SYS,messages})});
@@ -1009,7 +1009,7 @@ const t=totals();const btn=document.getElementById('btn-dinner');btn.disabled=tr
 const cards=document.getElementById('dinner-cards');
 cards.innerHTML='<div class="empty"><div class="dots"><span></span><span></span><span></span></div></div>';
 const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot),carb:Math.max(0,T.carb-t.carb),fat:Math.max(0,T.fat-t.fat)};
-const sys=`You are a meal planner optimizing for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 70g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"meals":[{"name":"<n>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"badge":"high|balanced|light","note":"<brief tip>"},...]}`;
+const sys=`You are a meal planner optimizing for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"meals":[{"name":"<n>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"badge":"high|balanced|light","note":"<brief tip>"},...]}`;
 const prompt=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat, ${t.fiber}g fiber.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${rem.carb}g carbs, ~${rem.fat}g fat needed.\ Suggest 4 realistic dinner options. Variety: one high-protein, one balanced, one lighter, one wildcard. Prioritize hitting protein target while staying within fat budget.`;
 try{
 const data=parseJ(await callAPI([{role:'user',content:prompt}],sys));
@@ -1038,7 +1038,7 @@ const t=totals();
 const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot)};
 const menu=document.getElementById('rest-menu').value.trim();
 const courses=Object.entries(SC).filter(([,v])=>v).map(([k])=>k);
-const sys=`You are a restaurant nutrition optimizer for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 70g fat, 35g fiber daily. Respond ONLY with valid JSON, no markdown: {"restaurant":"<n>","known":<bool>,"courses":[{"course":"appetizer|main|dessert","name":"<dish>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"note":"<tip>"},...],"bestCombo":{"names":"<dish1> + <dish2>","cal":<int>,"prot":<int>,"reasoning":"<1 sentence>"}}`;
+const sys=`You are a restaurant nutrition optimizer for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber daily. Respond ONLY with valid JSON, no markdown: {"restaurant":"<n>","known":<bool>,"courses":[{"course":"appetizer|main|dessert","name":"<dish>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"note":"<tip>"},...],"bestCombo":{"names":"<dish1> + <dish2>","cal":<int>,"prot":<int>,"reasoning":"<1 sentence>"}}`;
 const prompt=`Restaurant: ${name}\ ${menu?'Menu:\ '+menu+'\ ':''}\ So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${Math.max(0,T.carb-t.carb)}g carbs, ~${Math.max(0,T.fat-t.fat)}g fat.\ Courses needed: ${courses.join(', ')}.\ Suggest 2 options per course that best fit remaining macros. Prioritize protein. Give best combo order.`;
 try{
 const d=parseJ(await callAPI([{role:'user',content:prompt}],sys));
@@ -1070,7 +1070,7 @@ if(!bIsText&&!S.h2hPhotoB){showToast('Upload photo for option B');return;}
 const btn=document.querySelector('.btn-h2h');btn.disabled=true;btn.textContent='Comparing\u2026';
 document.getElementById('h2h-result').classList.remove('on');
 const t=totals();
-const sys=`You are a macro optimizer. User targets: 2100 cal, 150g protein, 180g carbs, 70g fat, 35g fiber. Goal: fat loss with muscle preservation. Respond ONLY with valid JSON, no markdown: {"winner":"A"|"B","a":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"b":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"reasoning":"<2 sentences>"}`;
+const sys=`You are a macro optimizer. User targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Goal: fat loss with muscle preservation. Respond ONLY with valid JSON, no markdown: {"winner":"A"|"B","a":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"b":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"reasoning":"<2 sentences>"}`;
 const ctx=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat. Remaining: ${T.cal-t.cal} cal, ${T.prot-t.prot}g protein, ${T.carb-t.carb}g carbs.`;
 let content;
 if(aIsText&&bIsText){content=[{type:'text',text:`${ctx}\ Option A: ${aText}\ Option B: ${bText}`}];}
