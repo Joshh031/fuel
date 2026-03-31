@@ -817,7 +817,7 @@ btn.classList.add('active');
 async function addWater(n){
 S.water=Math.max(0,Math.min(20,S.water+n));updateDash();
 if(n>0)showToast('\ud83d\udca7 '+S.water+'/'+T.water+' cups');
-try{await sb.upsert('water_log',{date:S.activeDate,cups:S.water});}catch(e){}
+try{await sb.del('water_log',`date=eq.${S.activeDate}`);await sb.insert('water_log',{date:S.activeDate,cups:S.water});}catch(e){}
 }
 
 async function quickPreset(key){
