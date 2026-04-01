@@ -418,6 +418,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   <div class="quick-row">
     <button class="qbtn" onclick="quickPreset('coffee')">&#9749; Iced Coffee</button>
     <button class="qbtn" onclick="quickPreset('smoothie')">&#127946; Smoothie</button>
+    <button class="qbtn" onclick="quickPreset('fiber')">&#127793; Fiber</button>
   </div>
   <div class="sec">Log a Meal</div>
   <div class="log-panel">
@@ -604,7 +605,8 @@ const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
 
 const PRESETS={
 coffee:{desc:'Starbucks Trenta Iced Coffee, splash whole milk',type:'snack',cal:80,prot:2,carb:8,fat:2,fiber:0,notes:''},
-smoothie:{desc:'Morning smoothie: peanut butter, banana, Dymatize protein scoop, water, 5g creatine',type:'breakfast',cal:420,prot:42,carb:32,fat:12,fiber:4,notes:''}
+smoothie:{desc:'Morning smoothie: peanut butter, banana, Dymatize protein scoop, water, 5g creatine',type:'breakfast',cal:420,prot:42,carb:32,fat:12,fiber:4,notes:''},
+fiber:{desc:'Fiber gummy (1 serving)',type:'snack',cal:10,prot:0,carb:3,fat:0,fiber:5,notes:''}
 };
 
 const ALC={
