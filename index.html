@@ -28,6 +28,10 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:10
 .dnav-today{font-family:var(--mono);font-size:9px;color:var(--cal);background:var(--cald);border:1px solid rgba(200,241,53,.2);border-radius:3px;padding:2px 8px;cursor:pointer;display:none}
 .dnav-today.on{display:block}
 .dnav-right{display:flex;align-items:center;gap:8px}
+.ex-row{display:flex;gap:3px;margin-bottom:9px}
+.ex-btn{flex:1;background:var(--sur);border:1px solid var(--bd);border-radius:var(--rs);color:var(--muted);font-family:var(--mono);font-size:9px;padding:7px 2px;cursor:pointer;text-align:center;letter-spacing:.04em;transition:all .15s}
+.ex-btn:active{border-color:var(--cal)}
+.ex-btn.active{border-color:var(--cal);background:var(--cald);color:var(--cal);font-weight:500}
 .big-bars{display:flex;flex-direction:column;gap:7px;margin-bottom:9px}
 .big-bar{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px}
 .bb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -142,7 +146,16 @@ textarea.ni::placeholder{color:var(--dim)}
 .mcard-acts{display:flex;gap:3px;flex-shrink:0}
 .mab{background:none;border:1px solid var(--bd);border-radius:4px;color:var(--muted);font-size:11px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .mab:active{border-color:var(--prot);color:var(--prot)}.mab.del:active{border-color:var(--warn);color:var(--warn)}
-.mcard-macros{display:flex;gap:9px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+.mcard-macros{display:flex;gap:9px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);cursor:pointer}
+.mcard-pcts{display:none;gap:6px;margin-top:6px;flex-wrap:wrap}
+.mcard-pcts.on{display:flex}
+.mpct{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.mpct .mpv{font-weight:600}
+.mpct.cal .mpv{color:var(--cal)}.mpct.prot .mpv{color:var(--prot)}.mpct.carb .mpv{color:var(--carb)}.mpct.fat .mpv{color:var(--fat)}.mpct.fiber .mpv{color:var(--fiber)}
+.mpct.warn .mpv{color:var(--warn)}
+.mcard-macros .mm-bar{height:2px;background:var(--sur2);border-radius:1px;margin-top:2px;overflow:hidden}
+.mcard-macros .mm-fill{height:100%;border-radius:1px}
+.mm.cal .mm-fill{background:var(--cal)}.mm.prot .mm-fill{background:var(--prot)}.mm.carb .mm-fill{background:var(--carb)}.mm.fat .mm-fill{background:var(--fat)}.mm.fiber .mm-fill{background:var(--fiber)}
 .mm{display:flex;flex-direction:column}
 .mmv{font-family:var(--mono);font-size:11px;font-weight:700}
 .mml{font-family:var(--mono);font-size:7px;color:var(--dim)}
@@ -341,6 +354,14 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <button class="dnav-btn" id="dnav-next" onclick="shiftDate(1)">&#8250;</button>
     </div>
   </div>
+  <div class="ex-row" id="ex-row">
+    <button class="ex-btn active" data-ex="REST" onclick="setExercise('REST')">REST</button>
+    <button class="ex-btn" data-ex="RUN" onclick="setExercise('RUN')">RUN</button>
+    <button class="ex-btn" data-ex="LEGS" onclick="setExercise('LEGS')">LEGS</button>
+    <button class="ex-btn" data-ex="BACK" onclick="setExercise('BACK')">BACK</button>
+    <button class="ex-btn" data-ex="CHEST" onclick="setExercise('CHEST')">CHEST</button>
+    <button class="ex-btn" data-ex="SHOULDERS" onclick="setExercise('SHOULDERS')">SHLD</button>
+  </div>
   <div class="water-nudge" id="water-nudge">
     <div class="water-nudge-icon">&#128167;</div>
     <div class="water-nudge-txt" id="water-nudge-txt">You haven't logged any water today.</div>
@@ -349,28 +370,28 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   <div class="big-bars">
     <div class="big-bar cal">
       <div class="bb-top">
-        <div><div class="bb-lbl">Calories</div><div class="bb-nums"><div class="bb-val" id="v-cal">0</div><div class="bb-tgt">/ 2,100</div></div></div>
+        <div><div class="bb-lbl">Calories</div><div class="bb-nums"><div class="bb-val" id="v-cal">0</div><div class="bb-tgt" id="tgt-cal">/ 2,100</div></div></div>
         <div class="bb-pct" id="p-cal">0%</div>
       </div>
       <div class="btrack"><div class="bfill" id="b-cal" style="width:0%"></div></div>
     </div>
     <div class="big-bar prot">
       <div class="bb-top">
-        <div><div class="bb-lbl">Protein</div><div class="bb-nums"><div class="bb-val" id="v-prot">0g</div><div class="bb-tgt">/ 150g</div></div></div>
+        <div><div class="bb-lbl">Protein</div><div class="bb-nums"><div class="bb-val" id="v-prot">0g</div><div class="bb-tgt" id="tgt-prot">/ 150g</div></div></div>
         <div class="bb-pct" id="p-prot">0%</div>
       </div>
       <div class="btrack"><div class="bfill" id="b-prot" style="width:0%"></div></div>
     </div>
     <div class="big-bar carb">
       <div class="bb-top">
-        <div><div class="bb-lbl">Carbs</div><div class="bb-nums"><div class="bb-val" id="v-carb">0g</div><div class="bb-tgt">/ 180g</div></div></div>
+        <div><div class="bb-lbl">Carbs</div><div class="bb-nums"><div class="bb-val" id="v-carb">0g</div><div class="bb-tgt" id="tgt-carb">/ 180g</div></div></div>
         <div class="bb-pct" id="p-carb">0%</div>
       </div>
       <div class="btrack"><div class="bfill" id="b-carb" style="width:0%"></div></div>
     </div>
     <div class="big-bar fat">
       <div class="bb-top">
-        <div><div class="bb-lbl">Fat</div><div class="bb-nums"><div class="bb-val" id="v-fat">0g</div><div class="bb-tgt">/ 80g</div></div></div>
+        <div><div class="bb-lbl">Fat</div><div class="bb-nums"><div class="bb-val" id="v-fat">0g</div><div class="bb-tgt" id="tgt-fat">/ 80g</div></div></div>
         <div class="bb-pct" id="p-fat">0%</div>
       </div>
       <div class="btrack"><div class="bfill" id="b-fat" style="width:0%"></div></div>
@@ -576,7 +597,9 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 const PROXY='https://fuel-proxy.joshh031.workers.dev';
 const SB_URL='https://vphqjxjphdsdpqaxqkpf.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwaHFqeGpwaGRzZHBxYXhxa3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODE3NDIsImV4cCI6MjA4NzQ1Nzc0Mn0.FqKeUq05RihLNXVIpzvyTEAPmiSXZfYXGgTRCc0uYpE';
-const T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
+const BASE_T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
+let T={...BASE_T};
+const EX={REST:{cal:0,carb:0},RUN:{cal:350,carb:70},LEGS:{cal:300,carb:60},BACK:{cal:200,carb:40},CHEST:{cal:200,carb:40},SHOULDERS:{cal:150,carb:30}};
 const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
 
 const PRESETS={
@@ -592,7 +615,7 @@ negroni:[{name:'Classic Negroni (3oz)',cal:210,carb:6,fat:0},{name:'Negroni Sbag
 boul:[{name:'Boulevardier (3oz)',cal:220,carb:7,fat:0},{name:'Boulevardier on rocks (4oz)',cal:230,carb:7,fat:0},{name:'Mezcal Boulevardier (3oz)',cal:215,carb:7,fat:0}]
 };
 
-let S={meals:[],water:0,pending:null,editId:null,mealType:'breakfast',photoData:null,voiceRec:null,isRec:false,voiceTxt:'',weekData:{},alcCat:'beer',alcQty:1,h2hType:{a:'text',b:'text'},h2hPhotoA:null,h2hPhotoB:null,activeDate:null};
+let S={meals:[],water:0,exercise:'REST',pending:null,editId:null,mealType:'breakfast',photoData:null,voiceRec:null,isRec:false,voiceTxt:'',weekData:{},alcCat:'beer',alcQty:1,h2hType:{a:'text',b:'text'},h2hPhotoA:null,h2hPhotoB:null,activeDate:null};
 const SC={appetizer:true,main:true,dessert:false};
 
 const fmtDate=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -633,13 +656,30 @@ S.activeDate=nd;renderDateNav();loadDay();
 }
 function goToday(){S.activeDate=td();renderDateNav();loadDay();}
 
+function applyExercise(){
+const bonus=EX[S.exercise]||EX.REST;
+T.cal=BASE_T.cal+bonus.cal;T.carb=BASE_T.carb+bonus.carb;T.prot=BASE_T.prot;T.fat=BASE_T.fat;T.fiber=BASE_T.fiber;T.water=BASE_T.water;
+document.querySelectorAll('.ex-btn').forEach(b=>b.classList.toggle('active',b.dataset.ex===S.exercise));
+document.getElementById('tgt-cal').textContent='/ '+T.cal.toLocaleString();
+document.getElementById('tgt-prot').textContent='/ '+T.prot+'g';
+document.getElementById('tgt-carb').textContent='/ '+T.carb+'g';
+document.getElementById('tgt-fat').textContent='/ '+T.fat+'g';
+}
+function setExercise(ex){
+S.exercise=ex;applyExercise();updateDash();
+sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_log',{date:S.activeDate,exercise:ex})).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
+}
+
 async function loadDay(){
-setSyncStatus('');S.meals=[];S.water=0;
+setSyncStatus('');S.meals=[];S.water=0;S.exercise='REST';applyExercise();
 try{
 const meals=await sb.get('meals',`date=eq.${S.activeDate}`,'created_at.asc');
 if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
 const water=await sb.get('water_log',`date=eq.${S.activeDate}`);
 S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
+const exData=await sb.get('exercise_log',`date=eq.${S.activeDate}`);
+S.exercise=(Array.isArray(exData)&&exData.length>0)?exData[0].exercise:'REST';
+applyExercise();
 if(isToday())await loadWeek();
 setSyncStatus('ok');
 }catch(e){setSyncStatus('err');}
@@ -770,10 +810,22 @@ if(fatPct>=50)return'<span class="mflag fat-heavy">FAT HEAVY</span>';
 if(carbCal>protCal*2.5&&(m.carb||0)>30)return'<span class="mflag carb-heavy">CARB HEAVY</span>';
 return'';
 }
+function mealPcts(m){
+const cp=T.cal?Math.round(m.cal/T.cal*100):0;
+const pp=T.prot?Math.round(m.prot/T.prot*100):0;
+const carbp=T.carb?Math.round((m.carb||0)/T.carb*100):0;
+const fp=T.fat?Math.round(m.fat/T.fat*100):0;
+const fip=T.fiber?Math.round(m.fiber/T.fiber*100):0;
+// Flag worst offender: macro that uses disproportionately more % than calories %
+const diffs={prot:pp-cp,carb:carbp-cp,fat:fp-cp,fiber:fip-cp};
+let worst=null,worstVal=15;
+for(const[k,v]of Object.entries(diffs)){if(v>worstVal){worst=k;worstVal=v;}}
+return{cp,pp,carbp,fp,fip,worst};
+}
 function renderMeals(){
 const el=document.getElementById('meals-list');
 if(!S.meals.length){el.innerHTML='<div class="empty"><div class="ei">\ud83c\udf7d</div>No meals yet.</div>';return;}
-el.innerHTML=[...S.meals].reverse().map(m=>` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div></div> <div class="mm carb"><div class="mmv">${m.carb||0}g</div><div class="mml">carb</div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div></div> </div> </div> `).join('');
+el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
 }
 
 function renderWeek(){
@@ -892,12 +944,12 @@ document.getElementById('vbtn').classList.remove('rec');document.getElementById(
 document.getElementById('vstatus').textContent=S.voiceTxt?'Tap to re-record':'Tap to speak';
 }
 
-const SYS=`You are a nutrition estimator. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"calories":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"} Estimate conservatively but realistically. Recognize HomeChef meal kit names. For meal kits assume 600-900 cal per full serving, adjust for stated portion. Flag if protein-to-calorie ratio is poor (below 25g protein per 400 cal).`;
+function getSYS(){return `You are a nutrition estimator. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Respond ONLY with valid JSON, no markdown: {"calories":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"} Estimate conservatively but realistically. Recognize HomeChef meal kit names. For meal kits assume 600-900 cal per full serving, adjust for stated portion. Flag if protein-to-calorie ratio is poor (below 25g protein per 400 cal).`;}
 
-const SUMSY=`You are a performance nutrition analyst. User targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;
+function getSUMSY(){return `You are a performance nutrition analyst. User targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;}
 
 async function callAPI(messages,system){
-const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:system||SYS,messages})});
+const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:system||getSYS(),messages})});
 const data=await res.json();
 if(!res.ok)throw new Error((data.error&&data.error.message)||'HTTP '+res.status);
 if(data.error)throw new Error(data.error.message||'API error');
@@ -1009,7 +1061,7 @@ const t=totals();const btn=document.getElementById('btn-dinner');btn.disabled=tr
 const cards=document.getElementById('dinner-cards');
 cards.innerHTML='<div class="empty"><div class="dots"><span></span><span></span><span></span></div></div>';
 const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot),carb:Math.max(0,T.carb-t.carb),fat:Math.max(0,T.fat-t.fat)};
-const sys=`You are a meal planner optimizing for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Respond ONLY with valid JSON, no markdown: {"meals":[{"name":"<n>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"badge":"high|balanced|light","note":"<brief tip>"},...]}`;
+const sys=`You are a meal planner optimizing for fat loss and muscle preservation. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Respond ONLY with valid JSON, no markdown: {"meals":[{"name":"<n>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"badge":"high|balanced|light","note":"<brief tip>"},...]}`;
 const prompt=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat, ${t.fiber}g fiber.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${rem.carb}g carbs, ~${rem.fat}g fat needed.\ Suggest 4 realistic dinner options. Variety: one high-protein, one balanced, one lighter, one wildcard. Prioritize hitting protein target while staying within fat budget.`;
 try{
 const data=parseJ(await callAPI([{role:'user',content:prompt}],sys));
@@ -1038,7 +1090,7 @@ const t=totals();
 const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot)};
 const menu=document.getElementById('rest-menu').value.trim();
 const courses=Object.entries(SC).filter(([,v])=>v).map(([k])=>k);
-const sys=`You are a restaurant nutrition optimizer for fat loss and muscle preservation. Targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber daily. Respond ONLY with valid JSON, no markdown: {"restaurant":"<n>","known":<bool>,"courses":[{"course":"appetizer|main|dessert","name":"<dish>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"note":"<tip>"},...],"bestCombo":{"names":"<dish1> + <dish2>","cal":<int>,"prot":<int>,"reasoning":"<1 sentence>"}}`;
+const sys=`You are a restaurant nutrition optimizer for fat loss and muscle preservation. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber daily. Respond ONLY with valid JSON, no markdown: {"restaurant":"<n>","known":<bool>,"courses":[{"course":"appetizer|main|dessert","name":"<dish>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"note":"<tip>"},...],"bestCombo":{"names":"<dish1> + <dish2>","cal":<int>,"prot":<int>,"reasoning":"<1 sentence>"}}`;
 const prompt=`Restaurant: ${name}\ ${menu?'Menu:\ '+menu+'\ ':''}\ So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${Math.max(0,T.carb-t.carb)}g carbs, ~${Math.max(0,T.fat-t.fat)}g fat.\ Courses needed: ${courses.join(', ')}.\ Suggest 2 options per course that best fit remaining macros. Prioritize protein. Give best combo order.`;
 try{
 const d=parseJ(await callAPI([{role:'user',content:prompt}],sys));
@@ -1070,7 +1122,7 @@ if(!bIsText&&!S.h2hPhotoB){showToast('Upload photo for option B');return;}
 const btn=document.querySelector('.btn-h2h');btn.disabled=true;btn.textContent='Comparing\u2026';
 document.getElementById('h2h-result').classList.remove('on');
 const t=totals();
-const sys=`You are a macro optimizer. User targets: 2100 cal, 150g protein, 180g carbs, 80g fat, 35g fiber. Goal: fat loss with muscle preservation. Respond ONLY with valid JSON, no markdown: {"winner":"A"|"B","a":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"b":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"reasoning":"<2 sentences>"}`;
+const sys=`You are a macro optimizer. User targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Goal: fat loss with muscle preservation. Respond ONLY with valid JSON, no markdown: {"winner":"A"|"B","a":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"b":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"reasoning":"<2 sentences>"}`;
 const ctx=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat. Remaining: ${T.cal-t.cal} cal, ${T.prot-t.prot}g protein, ${T.carb-t.carb}g carbs.`;
 let content;
 if(aIsText&&bIsText){content=[{type:'text',text:`${ctx}\ Option A: ${aText}\ Option B: ${bText}`}];}
@@ -1093,7 +1145,7 @@ const t=totals();const btn=document.getElementById('sum-btn');
 btn.disabled=true;btn.textContent='Generating\u2026';
 const prompt=`Date: ${S.activeDate}. Calories: ${t.cal}/${T.cal}. Protein: ${t.prot}g/${T.prot}g. Carbs: ${t.carb}g/${T.carb}g. Fat: ${t.fat}g/${T.fat}g. Fiber: ${t.fiber}g/${T.fiber}g. Water: ${S.water}/${T.water} cups. Meals: ${S.meals.map(m=>m.desc).join(', ')}.`;
 try{
-const text=await callAPI([{role:'user',content:prompt}],SUMSY);
+const text=await callAPI([{role:'user',content:prompt}],getSUMSY());
 document.getElementById('sum-text').textContent=text;
 }catch(e){document.getElementById('sum-text').textContent='Failed to generate \u2014 try again.';}
 btn.disabled=false;btn.textContent='Regenerate \u2192';
