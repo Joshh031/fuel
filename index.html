@@ -320,6 +320,21 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .mflag.carb-heavy{background:var(--carbd);color:var(--carb)}
 .mflag.good-ratio{background:var(--fiberd);color:var(--fiber)}
 
+/* WEIGHT ROW */
+.weight-row{display:flex;align-items:center;background:var(--sur);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 12px;margin-bottom:9px;gap:18px}
+.wr-cell{display:flex;flex-direction:column;gap:2px}
+.wr-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.wr-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--cal);cursor:pointer}
+.wr-val-sub{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--muted)}
+.wr-edit{margin-left:auto;background:none;border:1px solid var(--bd);border-radius:var(--rs);color:var(--muted);font-family:var(--mono);font-size:9px;padding:5px 10px;cursor:pointer}
+.wr-edit:active{border-color:var(--cal);color:var(--cal)}
+
+/* ADHERENCE ROW */
+.adh-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:11px;padding-top:11px;border-top:1px solid var(--bd)}
+.adh{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.adh-lbl{font-family:var(--mono);font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.adh-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cal)}
+
 /* MISSED MEAL MODAL */
 .mm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:center;justify-content:center;padding:20px;pointer-events:none}
 .mm-overlay.on{display:flex;pointer-events:all}
@@ -361,6 +376,11 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
     <button class="ex-btn" data-ex="BACK" onclick="setExercise('BACK')">BACK</button>
     <button class="ex-btn" data-ex="CHEST" onclick="setExercise('CHEST')">CHEST</button>
     <button class="ex-btn" data-ex="SHOULDERS" onclick="setExercise('SHOULDERS')">SHLD</button>
+  </div>
+  <div class="weight-row">
+    <div class="wr-cell"><div class="wr-lbl">Weight</div><div class="wr-val" id="w-val" onclick="promptWeight()">—</div></div>
+    <div class="wr-cell"><div class="wr-lbl">7-day avg</div><div class="wr-val-sub" id="w-avg">—</div></div>
+    <button class="wr-edit" onclick="promptWeight()">log →</button>
   </div>
   <div class="water-nudge" id="water-nudge">
     <div class="water-nudge-icon">&#128167;</div>
@@ -411,7 +431,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
     <div class="sbadge" style="flex:0;white-space:nowrap"><span class="slbl">deficit&nbsp;</span><span class="sval" id="wdef" style="color:var(--fiber)">&#8212;</span></div>
   </div>
   <div class="assess" id="assessment">
-    <div class="assess-top"><div class="assess-icon" id="a-icon"></div><div class="assess-stat" id="a-status"></div></div>
+    <div class="assess-top"><div class="assess-icon" id="a-icon"></div><div class="assess-stat" id="a-status"></div><span class="mflag" id="day-flag" style="display:none"></span></div>
     <div class="assess-note" id="a-note"></div>
   </div>
   <div class="sec">Quick Add</div>
@@ -552,8 +572,14 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   <div class="sec" id="log-label">Today's Log</div>
   <div class="meals" id="meals-list"><div class="empty"><div class="ei">&#127869;</div>No meals yet.</div></div>
   <div class="wp">
-    <div class="wp-hdr"><div class="wp-title">This Week</div><div class="wp-stats"><div class="wst">Avg <span id="wavg">&#8212;</span></div><div class="wst">Days <span id="wdays">0</span>/7</div></div></div>
+    <div class="wp-hdr"><div class="wp-title">This Week</div><div class="wp-stats"><div class="wst">Avg <span id="wavg">&#8212;</span></div><div class="wst">Days <span id="wdays">0</span>/7</div><div class="wst">Bank <span id="wbank">&#8212;</span></div></div></div>
     <div class="wbars" id="wbars"></div>
+    <div class="adh-row" id="adh-row" style="display:none">
+      <div class="adh"><div class="adh-lbl">Streak</div><div class="adh-val" id="adh-streak">0</div></div>
+      <div class="adh"><div class="adh-lbl">Under cal</div><div class="adh-val" id="adh-undercal">&#8212;</div></div>
+      <div class="adh"><div class="adh-lbl">Hit prot</div><div class="adh-val" id="adh-prot">&#8212;</div></div>
+      <div class="adh"><div class="adh-lbl">Logged</div><div class="adh-val"><span id="adh-days">0</span>/30</div></div>
+    </div>
   </div>
   <div class="sumbox">
     <div class="sumlbl">Daily Summary <span class="aichip">CLAUDE</span></div>
@@ -617,7 +643,7 @@ negroni:[{name:'Classic Negroni (3oz)',cal:210,carb:6,fat:0},{name:'Negroni Sbag
 boul:[{name:'Boulevardier (3oz)',cal:220,carb:7,fat:0},{name:'Boulevardier on rocks (4oz)',cal:230,carb:7,fat:0},{name:'Mezcal Boulevardier (3oz)',cal:215,carb:7,fat:0}]
 };
 
-let S={meals:[],water:0,exercise:'REST',pending:null,editId:null,mealType:'breakfast',photoData:null,voiceRec:null,isRec:false,voiceTxt:'',weekData:{},alcCat:'beer',alcQty:1,h2hType:{a:'text',b:'text'},h2hPhotoA:null,h2hPhotoB:null,activeDate:null};
+let S={meals:[],water:0,exercises:['REST'],weight:null,weightAvg:null,weekTargets:{},adherence:null,pending:null,editId:null,mealType:'breakfast',photoData:null,voiceRec:null,isRec:false,voiceTxt:'',weekData:{},alcCat:'beer',alcQty:1,h2hType:{a:'text',b:'text'},h2hPhotoA:null,h2hPhotoB:null,activeDate:null};
 const SC={appetizer:true,main:true,dessert:false};
 
 const fmtDate=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -659,42 +685,89 @@ S.activeDate=nd;renderDateNav();loadDay();
 function goToday(){S.activeDate=td();renderDateNav();loadDay();}
 
 function applyExercise(){
-const bonus=EX[S.exercise]||EX.REST;
-T.cal=BASE_T.cal+bonus.cal;T.carb=BASE_T.carb+bonus.carb;T.prot=BASE_T.prot;T.fat=BASE_T.fat;T.fiber=BASE_T.fiber;T.water=BASE_T.water;
-document.querySelectorAll('.ex-btn').forEach(b=>b.classList.toggle('active',b.dataset.ex===S.exercise));
+const exs=Array.isArray(S.exercises)&&S.exercises.length?S.exercises:['REST'];
+let bonusCal=0,bonusCarb=0;
+exs.forEach(ex=>{const b=EX[ex];if(b){bonusCal+=b.cal;bonusCarb+=b.carb;}});
+T.cal=BASE_T.cal+bonusCal;T.carb=BASE_T.carb+bonusCarb;T.prot=BASE_T.prot;T.fat=BASE_T.fat;T.fiber=BASE_T.fiber;T.water=BASE_T.water;
+document.querySelectorAll('.ex-btn').forEach(b=>b.classList.toggle('active',exs.includes(b.dataset.ex)));
 document.getElementById('tgt-cal').textContent='/ '+T.cal.toLocaleString();
 document.getElementById('tgt-prot').textContent='/ '+T.prot+'g';
 document.getElementById('tgt-carb').textContent='/ '+T.carb+'g';
 document.getElementById('tgt-fat').textContent='/ '+T.fat+'g';
 }
 function setExercise(ex){
-S.exercise=ex;applyExercise();updateDash();
-sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_log',{date:S.activeDate,exercise:ex})).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
+let cur=Array.isArray(S.exercises)?S.exercises.slice():[];
+if(ex==='REST'){cur=['REST'];}
+else{
+cur=cur.filter(e=>e!=='REST');
+if(cur.includes(ex))cur=cur.filter(e=>e!==ex);
+else cur.push(ex);
+if(!cur.length)cur=['REST'];
 }
+S.exercises=cur;
+applyExercise();updateDash();
+const stored=cur.join(',');
+sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_log',{date:S.activeDate,exercise:stored})).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
+}
+function computeTarget(rawEx){
+let bonus=0;
+if(rawEx)rawEx.split(',').map(s=>s.trim()).filter(Boolean).forEach(ex=>{const b=EX[ex];if(b)bonus+=b.cal;});
+return BASE_T.cal+bonus;
+}
+function dateOffset(n){const d=new Date();d.setDate(d.getDate()+n);return fmtDate(d);}
 
 async function loadDay(){
-setSyncStatus('');S.meals=[];S.water=0;S.exercise='REST';applyExercise();
+setSyncStatus('');S.meals=[];S.water=0;S.exercises=['REST'];S.weight=null;applyExercise();
 try{
 const meals=await sb.get('meals',`date=eq.${S.activeDate}`,'created_at.asc');
 if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
 const water=await sb.get('water_log',`date=eq.${S.activeDate}`);
 S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
 const exData=await sb.get('exercise_log',`date=eq.${S.activeDate}`);
-S.exercise=(Array.isArray(exData)&&exData.length>0)?exData[0].exercise:'REST';
+if(Array.isArray(exData)&&exData.length>0){
+const raw=exData[0].exercise||'REST';
+const parsed=raw.split(',').map(s=>s.trim()).filter(Boolean);
+S.exercises=parsed.length?parsed:['REST'];
+}
 applyExercise();
-if(isToday())await loadWeek();
+try{const w=await sb.get('weight_log',`date=eq.${S.activeDate}`);if(Array.isArray(w)&&w.length>0)S.weight=parseFloat(w[0].weight);}catch(e){}
+if(isToday()){await loadWeek();await loadAdherence();}
 setSyncStatus('ok');
 }catch(e){setSyncStatus('err');}
-updateDash();renderMeals();
+updateDash();renderMeals();renderWeight();
 if(isToday())renderWeek();
 }
 
 async function loadWeek(){
-S.weekData={};
+S.weekData={};S.weekTargets={};
+const start=dateOffset(-6),end=td();
 for(let i=6;i>=0;i--){
 const d=new Date();d.setDate(d.getDate()-i);const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 try{const meals=await sb.get('meals',`date=eq.${s}`,'created_at.asc');if(Array.isArray(meals)&&meals.length>0){S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),carb:meals.reduce((a,m)=>a+(m.carb||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};}}catch(e){}
 }
+try{const exs=await sb.get('exercise_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(exs))exs.forEach(e=>{S.weekTargets[e.date]=computeTarget(e.exercise);});}catch(e){}
+S.weightAvg=null;
+try{const ws=await sb.get('weight_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(ws)&&ws.length>0){const sum=ws.reduce((a,w)=>a+parseFloat(w.weight),0);S.weightAvg=Math.round(sum/ws.length*10)/10;}}catch(e){}
+}
+
+async function loadAdherence(){
+S.adherence=null;
+const start=dateOffset(-29),end=td();
+try{
+const meals=await sb.get('meals',`date=gte.${start}&date=lte.${end}`,'date.asc');
+if(!Array.isArray(meals))return;
+const byDay={};
+meals.forEach(m=>{if(!byDay[m.date])byDay[m.date]={cal:0,prot:0};byDay[m.date].cal+=m.cal||0;byDay[m.date].prot+=m.prot||0;});
+const exMap={};
+try{const exs=await sb.get('exercise_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(exs))exs.forEach(e=>{exMap[e.date]=e.exercise;});}catch(e){}
+const days=Object.keys(byDay).sort();
+if(!days.length)return;
+let underCal=0,hitProt=0;
+days.forEach(d=>{const t=computeTarget(exMap[d]);if(byDay[d].cal<=t)underCal++;if(byDay[d].prot>=BASE_T.prot)hitProt++;});
+let streak=0;
+for(let i=0;i<30;i++){const ds=dateOffset(-i);if(!byDay[ds])break;const t=computeTarget(exMap[ds]);if(byDay[ds].cal<=t)streak++;else break;}
+S.adherence={loggedDays:days.length,underCalPct:Math.round(underCal/days.length*100),hitProtPct:Math.round(hitProt/days.length*100),streak};
+}catch(e){}
 }
 
 function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.reduce((a,m)=>a+(m.prot||0),0),carb:S.meals.reduce((a,m)=>a+(m.carb||0),0),fat:S.meals.reduce((a,m)=>a+(m.fat||0),0),fiber:S.meals.reduce((a,m)=>a+(m.fiber||0),0)};}
@@ -770,7 +843,10 @@ else{icon='\ud83d\udcaa';astat='Deficit \u2014 on track';anote=`${Math.abs(rem)}
 document.getElementById('a-icon').textContent=icon;
 document.getElementById('a-status').textContent=astat;
 document.getElementById('a-note').textContent=anote;
-} else {a.classList.remove('on');}
+const df=dayFlag(t),dfEl=document.getElementById('day-flag');
+if(df){dfEl.textContent=df.text;dfEl.className='mflag '+df.cls;dfEl.style.display='inline-block';}
+else{dfEl.style.display='none';}
+} else {a.classList.remove('on');document.getElementById('day-flag').style.display='none';}
 if(isToday()&&S.weekData){S.weekData[S.activeDate]={cal:t.cal,prot:t.prot,carb:t.carb,fat:t.fat,fiber:t.fiber};}
 }
 
@@ -836,15 +912,53 @@ const now=new Date();
 const days=[];
 for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
 const maxCal=Math.max(T.cal*1.1,...days.map(d=>S.weekData[d.s]?.cal||0));
-let totCal=0,logDays=0;
+let totCal=0,logDays=0,bank=0,bankDays=0;
 bars.innerHTML=days.map(day=>{
 const cal=S.weekData[day.s]?.cal||0;const pct=cal>0?Math.round(cal/maxCal*100):0;
-if(cal>0){totCal+=cal;logDays++;}
-let cls='low';if(day.isToday)cls='today';else if(cal>T.cal+100)cls='over';else if(cal>=T.cal-300)cls='good';
+const dayTgt=S.weekTargets[day.s]||(day.isToday?T.cal:BASE_T.cal);
+if(cal>0){totCal+=cal;logDays++;bank+=(dayTgt-cal);bankDays++;}
+let cls='low';if(day.isToday)cls='today';else if(cal>dayTgt+100)cls='over';else if(cal>=dayTgt-300)cls='good';
 return`<div class="wd${day.isToday?' cur':''}"><div class="wbw"><div class="wb ${cls}" style="height:${pct}%"></div></div><div class="wlbl">${day.label}</div></div>`;
 }).join('');
 document.getElementById('wavg').textContent=logDays>0?Math.round(totCal/logDays).toLocaleString():'\u2014';
 document.getElementById('wdays').textContent=logDays;
+const bEl=document.getElementById('wbank');
+if(bankDays>0){const r=Math.round(bank);bEl.textContent=(r>0?'+':'')+r.toLocaleString();bEl.style.color=r>=0?'var(--fiber)':'var(--warn)';}
+else{bEl.textContent='\u2014';bEl.style.color='';}
+const adh=S.adherence,row=document.getElementById('adh-row');
+if(adh&&adh.loggedDays>=3){
+row.style.display='grid';
+document.getElementById('adh-streak').textContent=adh.streak;
+document.getElementById('adh-undercal').textContent=adh.underCalPct+'%';
+document.getElementById('adh-prot').textContent=adh.hitProtPct+'%';
+document.getElementById('adh-days').textContent=adh.loggedDays;
+}else{row.style.display='none';}
+}
+
+function renderWeight(){
+document.getElementById('w-val').textContent=S.weight?S.weight+' lbs':'\u2014';
+document.getElementById('w-avg').textContent=S.weightAvg?S.weightAvg+' lbs':'\u2014';
+}
+function promptWeight(){
+const cur=S.weight?String(S.weight):'';
+const v=prompt('Enter weight in lbs (e.g. 175.5):',cur);
+if(v===null)return;
+const n=parseFloat(v);
+if(isNaN(n)||n<=0||n>1000){showToast('Invalid weight');return;}
+S.weight=Math.round(n*10)/10;
+renderWeight();
+sb.del('weight_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('weight_log',{date:S.activeDate,weight:S.weight})).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(renderWeight);}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
+}
+function dayFlag(t){
+if(t.cal<400)return null;
+const fatCal=t.fat*9,protCal=t.prot*4,carbCal=t.carb*4;
+const tot=fatCal+protCal+carbCal;
+if(tot<=0)return null;
+const fatPct=fatCal/tot*100,protPct=protCal/tot*100;
+if(protPct>=35)return{text:'HIGH PROT',cls:'good-ratio'};
+if(fatPct>=50)return{text:'FAT HEAVY',cls:'fat-heavy'};
+if(carbCal>protCal*2.5&&t.carb>120)return{text:'CARB HEAVY',cls:'carb-heavy'};
+return null;
 }
 
 function init(){initDateNav();initAlcohol();loadDay().then(function(){checkMissedMeals();});}
