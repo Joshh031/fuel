@@ -1065,7 +1065,7 @@ function getSYS(){return `You are a nutrition estimator. Targets: ${T.cal} cal, 
 function getSUMSY(){return `You are a performance nutrition analyst. User targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;}
 
 async function callAPI(messages,system){
-const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:system||getSYS(),messages})});
+const res=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:system||getSYS(),messages})});
 const data=await res.json();
 if(!res.ok)throw new Error((data.error&&data.error.message)||'HTTP '+res.status);
 if(data.error)throw new Error(data.error.message||'API error');
