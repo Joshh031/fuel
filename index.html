@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FUEL">
+<link rel="manifest" href="manifest.json">
 <title>FUEL</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -335,6 +336,17 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .adh-lbl{font-family:var(--mono);font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .adh-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cal)}
 
+/* TARGETS BUTTON */
+.tgt-btn{background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;padding:0;line-height:1}
+.tgt-btn:active{color:var(--cal)}
+
+/* WEIGHT TREND */
+.wtrend{margin-top:11px;padding-top:11px;border-top:1px solid var(--bd)}
+.wt-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.wt-lbl{font-family:var(--mono);font-size:7px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.wt-delta{font-family:var(--mono);font-size:10px;font-weight:600}
+#wt-svg{width:100%;height:40px;display:block}
+
 /* MISSED MEAL MODAL */
 .mm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:none;align-items:center;justify-content:center;padding:20px;pointer-events:none}
 .mm-overlay.on{display:flex;pointer-events:all}
@@ -356,7 +368,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 <div class="app">
   <div class="hdr">
     <div class="logo">fuel</div>
-    <div class="sync-dot" id="sync-dot"></div>
+    <div style="display:flex;align-items:center;gap:10px"><button class="tgt-btn" onclick="openTargets()" title="Edit targets">&#9881;</button><div class="sync-dot" id="sync-dot"></div></div>
   </div>
   <div class="date-nav">
     <button class="dnav-btn" onclick="shiftDate(-1)">&#8249;</button>
@@ -580,11 +592,16 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <div class="adh"><div class="adh-lbl">Hit prot</div><div class="adh-val" id="adh-prot">&#8212;</div></div>
       <div class="adh"><div class="adh-lbl">Logged</div><div class="adh-val"><span id="adh-days">0</span>/30</div></div>
     </div>
+    <div class="wtrend" id="wtrend" style="display:none">
+      <div class="wt-hdr"><span class="wt-lbl">Weight &middot; 30d</span><span class="wt-delta" id="wt-delta"></span></div>
+      <svg id="wt-svg" viewBox="0 0 300 40" preserveAspectRatio="none"></svg>
+    </div>
   </div>
   <div class="sumbox">
     <div class="sumlbl">Daily Summary <span class="aichip">CLAUDE</span></div>
     <div class="sumtxt" id="sum-text">Tap below to get your daily performance analysis.</div>
     <button class="btn-gen" id="sum-btn" onclick="getDailySummary()">Generate summary &#8594;</button>
+    <button class="btn-gen" id="wk-btn" onclick="getWeeklyReview()" style="margin-left:4px">Weekly review &#8594;</button>
   </div>
 </div>
 
@@ -619,12 +636,29 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
     <div class="macts"><button class="btn-sv" onclick="saveEdit()">Save Changes</button><button class="btn-cn" onclick="closeEditModal()">Cancel</button></div>
   </div>
 </div>
+<div class="overlay" id="tgt-overlay">
+  <div class="modal">
+    <div class="modal-title">Daily Targets</div>
+    <div class="mgrid">
+      <div class="mf"><label>Calories (rest day)</label><input type="number" id="tg-cal" inputmode="numeric"></div>
+      <div class="mf"><label>Protein (g)</label><input type="number" id="tg-prot" inputmode="numeric"></div>
+      <div class="mf"><label>Carbs (g)</label><input type="number" id="tg-carb" inputmode="numeric"></div>
+      <div class="mf"><label>Fat (g)</label><input type="number" id="tg-fat" inputmode="numeric"></div>
+      <div class="mf"><label>Fiber (g)</label><input type="number" id="tg-fiber" inputmode="numeric"></div>
+      <div class="mf"><label>Water (cups)</label><input type="number" id="tg-water" inputmode="numeric"></div>
+    </div>
+    <button class="btn-gen" id="rem-btn" style="width:100%;margin:0 0 10px;padding:9px" onclick="enableReminders()">&#128276; Enable reminders</button>
+    <div class="macts"><button class="btn-sv" onclick="saveTargets()">Save Targets</button><button class="btn-cn" onclick="closeTargets()">Cancel</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 const PROXY='https://fuel-proxy.joshh031.workers.dev';
 const SB_URL='https://vphqjxjphdsdpqaxqkpf.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwaHFqeGpwaGRzZHBxYXhxa3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODE3NDIsImV4cCI6MjA4NzQ1Nzc0Mn0.FqKeUq05RihLNXVIpzvyTEAPmiSXZfYXGgTRCc0uYpE';
+const VAPID_PUB='BFNSOYJ40GPVyp6myP7E_OPjCHdhA_VcrYM-LluvFTxBTFfgtEOm0nXKjPTbyJTGugFRwjGT4vxJENs9cXz6ABw';
 const BASE_T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
+try{const _sv=JSON.parse(localStorage.getItem('fuel_targets')||'{}');['cal','prot','carb','fat','fiber','water'].forEach(k=>{const n=parseInt(_sv[k]);if(n>0)BASE_T[k]=n;});}catch(e){}
 let T={...BASE_T};
 const EX={REST:{cal:0,carb:0},RUN:{cal:350,carb:70},LEGS:{cal:300,carb:60},BACK:{cal:200,carb:40},CHEST:{cal:200,carb:40},SHOULDERS:{cal:150,carb:30}};
 const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
@@ -741,13 +775,16 @@ if(isToday())renderWeek();
 async function loadWeek(){
 S.weekData={};S.weekTargets={};
 const start=dateOffset(-6),end=td();
-for(let i=6;i>=0;i--){
-const d=new Date();d.setDate(d.getDate()-i);const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-try{const meals=await sb.get('meals',`date=eq.${s}`,'created_at.asc');if(Array.isArray(meals)&&meals.length>0){S.weekData[s]={cal:meals.reduce((a,m)=>a+(m.cal||0),0),prot:meals.reduce((a,m)=>a+(m.prot||0),0),carb:meals.reduce((a,m)=>a+(m.carb||0),0),fat:meals.reduce((a,m)=>a+(m.fat||0),0),fiber:meals.reduce((a,m)=>a+(m.fiber||0),0)};}}catch(e){}
-}
+try{const meals=await sb.get('meals',`date=gte.${start}&date=lte.${end}`,'created_at.asc');
+if(Array.isArray(meals))meals.forEach(m=>{const s=m.date;if(!s)return;if(!S.weekData[s])S.weekData[s]={cal:0,prot:0,carb:0,fat:0,fiber:0};const w=S.weekData[s];w.cal+=m.cal||0;w.prot+=m.prot||0;w.carb+=m.carb||0;w.fat+=m.fat||0;w.fiber+=m.fiber||0;});}catch(e){}
 try{const exs=await sb.get('exercise_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(exs))exs.forEach(e=>{S.weekTargets[e.date]=computeTarget(e.exercise);});}catch(e){}
-S.weightAvg=null;
-try{const ws=await sb.get('weight_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(ws)&&ws.length>0){const sum=ws.reduce((a,w)=>a+parseFloat(w.weight),0);S.weightAvg=Math.round(sum/ws.length*10)/10;}}catch(e){}
+S.weightAvg=null;S.weightSeries=[];
+try{const ws=await sb.get('weight_log',`date=gte.${dateOffset(-29)}&date=lte.${end}`,'date.asc');
+if(Array.isArray(ws)){
+S.weightSeries=ws.map(w=>({date:w.date,weight:parseFloat(w.weight)})).filter(w=>!isNaN(w.weight));
+const wk=S.weightSeries.filter(w=>w.date>=start);
+if(wk.length)S.weightAvg=Math.round(wk.reduce((a,w)=>a+w.weight,0)/wk.length*10)/10;
+}}catch(e){}
 }
 
 async function loadAdherence(){
@@ -789,10 +826,10 @@ document.getElementById('v-fat').textContent=t.fat+'g';
 document.getElementById('p-fat').textContent=pct(t.fat,T.fat)+'%';
 document.getElementById('b-fat').style.width=barPct(t.fat,T.fat)+'%';
 document.getElementById('v-fiber').textContent=t.fiber+'g';
-document.getElementById('p-fiber').textContent=pct(t.fiber,T.fiber)+'% of 35g';
+document.getElementById('p-fiber').textContent=pct(t.fiber,T.fiber)+'% of '+T.fiber+'g';
 document.getElementById('b-fiber').style.width=barPct(t.fiber,T.fiber)+'%';
 document.getElementById('v-water').textContent=S.water;
-document.getElementById('p-water').textContent=S.water+' of 8';
+document.getElementById('p-water').textContent=S.water+' of '+T.water;
 document.getElementById('b-water').style.width=pct(S.water,T.water)+'%';
 // Water pace + nudge + fab
 document.getElementById('fab-count').textContent=S.water;
@@ -933,6 +970,28 @@ document.getElementById('adh-undercal').textContent=adh.underCalPct+'%';
 document.getElementById('adh-prot').textContent=adh.hitProtPct+'%';
 document.getElementById('adh-days').textContent=adh.loggedDays;
 }else{row.style.display='none';}
+renderWeightTrend();
+}
+
+function renderWeightTrend(){
+const el=document.getElementById('wtrend');
+const pts=S.weightSeries||[];
+if(pts.length<2){el.style.display='none';return;}
+el.style.display='block';
+const w=300,h=40,pad=3;
+const vals=pts.map(p=>p.weight);
+let min=Math.min(...vals),max=Math.max(...vals);
+if(max-min<1){const mid=(max+min)/2;min=mid-0.5;max=mid+0.5;}
+const t0=parseLocal(pts[0].date).getTime(),t1=parseLocal(pts[pts.length-1].date).getTime();
+const X=p=>t1===t0?w/2:pad+(parseLocal(p.date).getTime()-t0)/(t1-t0)*(w-2*pad);
+const Y=v=>h-pad-(v-min)/(max-min)*(h-2*pad);
+const path=pts.map((p,i)=>(i?'L':'M')+X(p).toFixed(1)+' '+Y(p.weight).toFixed(1)).join(' ');
+const last=pts[pts.length-1];
+document.getElementById('wt-svg').innerHTML=`<path d="${path}" fill="none" stroke="var(--cal)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/><circle cx="${X(last).toFixed(1)}" cy="${Y(last.weight).toFixed(1)}" r="2.5" fill="var(--cal)"/>`;
+const d=Math.round((last.weight-pts[0].weight)*10)/10;
+const dl=document.getElementById('wt-delta');
+dl.textContent=(d>0?'+':'')+d+' lbs';
+dl.style.color=d<0?'var(--fiber)':d>0?'var(--fat)':'var(--muted)';
 }
 
 function renderWeight(){
@@ -947,7 +1006,7 @@ const n=parseFloat(v);
 if(isNaN(n)||n<=0||n>1000){showToast('Invalid weight');return;}
 S.weight=Math.round(n*10)/10;
 renderWeight();
-sb.del('weight_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('weight_log',{date:S.activeDate,weight:S.weight})).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(renderWeight);}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
+sb.del('weight_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('weight_log',{date:S.activeDate,weight:S.weight})).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(()=>{renderWeight();renderWeek();});}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
 }
 function dayFlag(t){
 if(t.cal<400)return null;
@@ -961,7 +1020,11 @@ if(carbCal>protCal*2.5&&t.carb>120)return{text:'CARB HEAVY',cls:'carb-heavy'};
 return null;
 }
 
-function init(){initDateNav();initAlcohol();loadDay().then(function(){checkMissedMeals();});}
+function init(){initDateNav();initAlcohol();loadDay().then(function(){
+const a=new URLSearchParams(location.search).get('action');
+if(a){history.replaceState(null,'',location.pathname);handleAction(a);}
+else{checkMissedMeals();}
+});}
 
 function switchTab(tab,btn){
 document.querySelectorAll('.ltab').forEach(t=>t.classList.remove('active'));
@@ -982,10 +1045,12 @@ btn.closest('.chips').querySelectorAll('.chip:not(.drink-chip)').forEach(c=>c.cl
 btn.classList.add('active');
 }
 
-async function addWater(n){
+let waterQ=Promise.resolve();
+function addWater(n){
 S.water=Math.max(0,Math.min(20,S.water+n));updateDash();
 if(n>0)showToast('\ud83d\udca7 '+S.water+'/'+T.water+' cups');
-try{await sb.del('water_log',`date=eq.${S.activeDate}`);await sb.insert('water_log',{date:S.activeDate,cups:S.water});}catch(e){}
+const date=S.activeDate,cups=S.water;
+waterQ=waterQ.then(async()=>{try{await sb.del('water_log',`date=eq.${date}`);await sb.insert('water_log',{date,cups});setSyncStatus('ok');}catch(e){setSyncStatus('err');}});
 }
 
 async function quickPreset(key){
@@ -1025,17 +1090,32 @@ S.meals.push(entry);updateDash();renderMeals();closeDrinkModal();showToast(entry
 try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:'',cal:entry.cal,prot:0,carb:entry.carb,fat:entry.fat,fiber:0,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
 }
 
+function shrinkImage(file){
+return new Promise(res=>{
+const fallback=()=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(file);};
+try{
+const url=URL.createObjectURL(file);
+const img=new Image();
+img.onload=()=>{
+const max=1568,sc=Math.min(1,max/Math.max(img.width,img.height));
+const w=Math.max(1,Math.round(img.width*sc)),h=Math.max(1,Math.round(img.height*sc));
+const c=document.createElement('canvas');c.width=w;c.height=h;
+c.getContext('2d').drawImage(img,0,0,w,h);
+URL.revokeObjectURL(url);
+try{res(c.toDataURL('image/jpeg',0.85));}catch(e){fallback();}
+};
+img.onerror=()=>{URL.revokeObjectURL(url);fallback();};
+img.src=url;
+}catch(e){fallback();}
+});
+}
 function handlePhoto(e){
 const file=e.target.files[0];if(!file)return;
-const r=new FileReader();
-r.onload=ev=>{S.photoData=ev.target.result;document.getElementById('pimg').src=S.photoData;document.getElementById('pprev').style.display='block';document.getElementById('pname').textContent=file.name;document.getElementById('btn-photo').disabled=false;};
-r.readAsDataURL(file);
+shrinkImage(file).then(data=>{S.photoData=data;document.getElementById('pimg').src=S.photoData;document.getElementById('pprev').style.display='block';document.getElementById('pname').textContent=file.name;document.getElementById('btn-photo').disabled=false;});
 }
 function handleH2HPhoto(e,side){
 const file=e.target.files[0];if(!file)return;
-const r=new FileReader();
-r.onload=ev=>{if(side==='a'){S.h2hPhotoA=ev.target.result;document.getElementById('h2h-a-img').src=S.h2hPhotoA;document.getElementById('h2h-a-prev').style.display='block';}else{S.h2hPhotoB=ev.target.result;document.getElementById('h2h-b-img').src=S.h2hPhotoB;document.getElementById('h2h-b-prev').style.display='block';}};
-r.readAsDataURL(file);
+shrinkImage(file).then(data=>{if(side==='a'){S.h2hPhotoA=data;document.getElementById('h2h-a-img').src=data;document.getElementById('h2h-a-prev').style.display='block';}else{S.h2hPhotoB=data;document.getElementById('h2h-b-img').src=data;document.getElementById('h2h-b-prev').style.display='block';}});
 }
 function setH2HType(side,type,btn){
 S.h2hType[side]=type;
@@ -1072,14 +1152,14 @@ if(data.error)throw new Error(data.error.message||'API error');
 if(!data.content||!data.content[0])throw new Error('Empty response');
 return data.content[0].text;
 }
-function parseJ(raw){return JSON.parse(raw.replace(/`json|`/g,'').trim());}
+function parseJ(raw){raw=String(raw).trim();const m=raw.match(/\{[\s\S]*\}/);return JSON.parse(m?m[0]:raw);}
 
 async function analyzeText(){
 const input=document.getElementById('t-input').value.trim();
 if(!input){showToast('Enter a meal description first');return;}
 const notes=document.getElementById('t-notes').value.trim();
 showAILoading();const btn=document.getElementById('btn-text');btn.disabled=true;btn.textContent='\u2026';
-try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mealType}\ Description: ${input}${notes?'\ Notes: '+notes:''}`}])),input,S.mealType,notes);}
+try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mealType}\nDescription: ${input}${notes?'\nNotes: '+notes:''}`}])),input,S.mealType,notes);}
 catch(e){showToast('Failed: '+e.message.substring(0,60),5000);hideAI();}
 btn.disabled=false;btn.textContent='Analyze \u2192';
 }
@@ -1096,7 +1176,7 @@ btn.disabled=false;btn.textContent='Analyze \u2192';
 async function analyzeVoice(){
 if(!S.voiceTxt)return;
 showAILoading();const btn=document.getElementById('btn-voice');btn.disabled=true;btn.textContent='\u2026';
-try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mealType}\ Description: ${S.voiceTxt}`}])),S.voiceTxt,S.mealType,'');}
+try{showAIResult(parseJ(await callAPI([{role:'user',content:`Meal type: ${S.mealType}\nDescription: ${S.voiceTxt}`}])),S.voiceTxt,S.mealType,'');}
 catch(e){showToast('Failed: '+e.message.substring(0,60),5000);hideAI();}
 btn.disabled=false;btn.textContent='Analyze \u2192';
 }
@@ -1158,18 +1238,77 @@ try{await sb.update('meals',`id=eq.${S.editId}`,{cal:m.cal,prot:m.prot,carb:m.ca
 function closeEditModal(){document.getElementById('edit-overlay').classList.remove('on');S.editId=null;}
 document.getElementById('edit-overlay').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
 
-function renderHistory(){
-const list=document.getElementById('hist-list');
-if(!S.meals.length){list.innerHTML='<div class="empty"><div class="ei">\u26a1</div>No history yet.</div>';return;}
-const seen=new Set(),unique=[];
-[...S.meals].reverse().forEach(m=>{const k=m.desc.substring(0,40);if(!seen.has(k)){seen.add(k);unique.push(m);}});
-list.innerHTML=unique.map(m=>`<div class="hi"><div class="hi-info"><div class="hi-name">${esc(m.desc.substring(0,52))}${m.desc.length>52?'\u2026':''}</div><div class="hi-meta">${m.type} \u00b7 ${m.time}</div></div><div class="hi-nums"><span class="hc">${m.cal}kcal</span><br><span class="hp">${m.prot}g P</span></div><button class="hi-add" onclick="quickAdd(${m.id})">+</button></div>`).join('');
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('sw.js').catch(()=>{});
+navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.action)handleAction(e.data.action);});
 }
-async function quickAdd(id){
-const src=S.meals.find(m=>m.id===id);if(!src)return;
-const entry={...src,id:Date.now(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
-S.meals.push(entry);updateDash();renderMeals();showToast('Re-added \u00b7 '+entry.cal+' kcal');
-try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb||0,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+async function handleAction(a){
+if(S.activeDate!==td()){S.activeDate=td();renderDateNav();await loadDay();}
+if(a==='water')addWater(1);
+else if(a==='weight')promptWeight();
+}
+function urlB64ToU8(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&typeof Notification!=='undefined';}
+async function refreshRemBtn(){
+const b=document.getElementById('rem-btn');if(!b)return;
+try{
+if(!pushSupported()){b.textContent='\ud83d\udd14 Reminders \u2014 needs Home Screen app';return;}
+if(Notification.permission==='granted'){
+const reg=await navigator.serviceWorker.ready;
+const sub=await reg.pushManager.getSubscription();
+if(sub){b.textContent='\ud83d\udd14 Reminders on \u2713';return;}
+}
+b.textContent='\ud83d\udd14 Enable reminders';
+}catch(e){}
+}
+async function enableReminders(){
+if(!pushSupported()){showToast('Open from your Home Screen icon to enable push');return;}
+try{
+const reg=await navigator.serviceWorker.ready;
+const perm=await Notification.requestPermission();
+if(perm!=='granted'){showToast('Notifications not allowed');return;}
+let sub=await reg.pushManager.getSubscription();
+if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToU8(VAPID_PUB)});
+await sb.upsert('push_subs',{endpoint:sub.endpoint,sub:sub.toJSON()});
+showToast('Reminders enabled \u2713');refreshRemBtn();
+}catch(e){showToast('Failed: '+String(e.message||e).substring(0,50),4000);}
+}
+
+function openTargets(){
+['cal','prot','carb','fat','fiber','water'].forEach(k=>document.getElementById('tg-'+k).value=BASE_T[k]);
+document.getElementById('tgt-overlay').classList.add('on');
+refreshRemBtn();
+}
+function closeTargets(){document.getElementById('tgt-overlay').classList.remove('on');}
+function saveTargets(){
+['cal','prot','carb','fat','fiber','water'].forEach(k=>{const n=parseInt(document.getElementById('tg-'+k).value);if(n>0)BASE_T[k]=n;});
+localStorage.setItem('fuel_targets',JSON.stringify({cal:BASE_T.cal,prot:BASE_T.prot,carb:BASE_T.carb,fat:BASE_T.fat,fiber:BASE_T.fiber,water:BASE_T.water}));
+applyExercise();updateDash();if(isToday())renderWeek();
+closeTargets();showToast('Targets updated');
+}
+document.getElementById('tgt-overlay').addEventListener('click',function(e){if(e.target===this)closeTargets();});
+
+let histCache=null,histAt=0;
+function fmtShort(sd){const d=parseLocal(sd);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+async function renderHistory(){
+const list=document.getElementById('hist-list');
+if(!histCache)list.innerHTML='<div class="empty"><div class="dots"><span></span><span></span><span></span></div></div>';
+if(!histCache||Date.now()-histAt>120000){
+try{const rows=await sb.get('meals',`date=gte.${dateOffset(-13)}&date=lte.${td()}`,'created_at.desc');
+if(Array.isArray(rows)){histCache=rows;histAt=Date.now();}}catch(e){}
+}
+const rows=histCache||[];
+if(!rows.length){list.innerHTML='<div class="empty"><div class="ei">\u26a1</div>No history yet.</div>';return;}
+const seen=new Set(),unique=[];
+rows.forEach(m=>{const k=(m.description||'').substring(0,40);if(!k||seen.has(k))return;seen.add(k);unique.push(m);});
+S._hist=unique.slice(0,20);
+list.innerHTML=S._hist.map((m,i)=>`<div class="hi"><div class="hi-info"><div class="hi-name">${esc(m.description.substring(0,52))}${m.description.length>52?'\u2026':''}</div><div class="hi-meta">${esc(m.meal_type)} \u00b7 ${m.date===td()?(m.meal_time||'today'):fmtShort(m.date)}</div></div><div class="hi-nums"><span class="hc">${m.cal||0}kcal</span><br><span class="hp">${m.prot||0}g P</span></div><button class="hi-add" onclick="histAdd(${i})">+</button></div>`).join('');
+}
+async function histAdd(i){
+const src=(S._hist||[])[i];if(!src)return;
+const entry={id:Date.now(),type:src.meal_type,desc:src.description,notes:src.notes||'',cal:src.cal||0,prot:src.prot||0,carb:src.carb||0,fat:src.fat||0,fiber:src.fiber||0,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
+S.meals.push(entry);updateDash();renderMeals();showToast('Re-added \u00b7 '+entry.cal+' kcal');histAt=0;
+try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
 }
 
 async function getDinnerRecs(){
@@ -1178,14 +1317,18 @@ const cards=document.getElementById('dinner-cards');
 cards.innerHTML='<div class="empty"><div class="dots"><span></span><span></span><span></span></div></div>';
 const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot),carb:Math.max(0,T.carb-t.carb),fat:Math.max(0,T.fat-t.fat)};
 const sys=`You are a meal planner optimizing for fat loss and muscle preservation. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Respond ONLY with valid JSON, no markdown: {"meals":[{"name":"<n>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"badge":"high|balanced|light","note":"<brief tip>"},...]}`;
-const prompt=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat, ${t.fiber}g fiber.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${rem.carb}g carbs, ~${rem.fat}g fat needed.\ Suggest 4 realistic dinner options. Variety: one high-protein, one balanced, one lighter, one wildcard. Prioritize hitting protein target while staying within fat budget.`;
+const prompt=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat, ${t.fiber}g fiber.\nRemaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${rem.carb}g carbs, ~${rem.fat}g fat needed.\nSuggest 4 realistic dinner options. Variety: one high-protein, one balanced, one lighter, one wildcard. Prioritize hitting protein target while staying within fat budget.`;
 try{
 const data=parseJ(await callAPI([{role:'user',content:prompt}],sys));
-if(data.meals&&data.meals.length){cards.innerHTML=data.meals.map(m=>`<div class="dcard" onclick="selectDinner('${esc(m.name)}',${m.cal},${m.prot},${m.carb||0},${m.fat},${m.fiber||0})"><div class="dcard-top"><div class="dcard-name">${esc(m.name)}</div><span class="dbadge ${m.badge}">${m.badge}</span></div><div class="dcard-macros"><span class="dm c">${m.cal}kcal</span><span class="dm p">${m.prot}g P</span><span class="dm" style="color:var(--carb)">${m.carb||0}g C</span><span class="dm f">${m.fat}g F</span></div>${m.note?`<div class="dcard-note">${esc(m.note)}</div>`:''}<div class="dcard-tap">tap to log \u2192</div></div>`).join('');}
+if(data.meals&&data.meals.length){S._dinner=data.meals;cards.innerHTML=data.meals.map((m,i)=>`<div class="dcard" onclick="selectDinner(${i})"><div class="dcard-top"><div class="dcard-name">${esc(m.name)}</div><span class="dbadge ${esc(m.badge)}">${esc(m.badge)}</span></div><div class="dcard-macros"><span class="dm c">${m.cal}kcal</span><span class="dm p">${m.prot}g P</span><span class="dm" style="color:var(--carb)">${m.carb||0}g C</span><span class="dm f">${m.fat}g F</span></div>${m.note?`<div class="dcard-note">${esc(m.note)}</div>`:''}<div class="dcard-tap">tap to log \u2192</div></div>`).join('');}
 }catch(e){cards.innerHTML='<div class="empty">Failed \u2014 try again.</div>';}
 btn.disabled=false;btn.textContent='Refresh \u2192';
 }
-function selectDinner(name,cal,prot,carb,fat,fiber){
+function selectDinner(i){
+const m=(S._dinner||[])[i];if(!m)return;
+showPick(m.name,m.cal,m.prot,m.carb||0,m.fat,m.fiber||0);
+}
+function showPick(name,cal,prot,carb,fat,fiber){
 document.getElementById('e-cal').value=cal;document.getElementById('e-prot').value=prot;document.getElementById('e-carb').value=carb;document.getElementById('e-fat').value=fat;document.getElementById('e-fiber').value=fiber;
 document.getElementById('ai-cal').textContent=cal;document.getElementById('ai-prot').textContent=prot+'g';document.getElementById('ai-carb').textContent=carb+'g';document.getElementById('ai-fat').textContent=fat+'g';document.getElementById('ai-fiber').textContent=fiber+'g';
 document.getElementById('ai-desc').textContent=name;document.getElementById('ai-dots').style.display='none';
@@ -1207,25 +1350,22 @@ const rem={cal:Math.max(0,T.cal-t.cal),prot:Math.max(0,T.prot-t.prot)};
 const menu=document.getElementById('rest-menu').value.trim();
 const courses=Object.entries(SC).filter(([,v])=>v).map(([k])=>k);
 const sys=`You are a restaurant nutrition optimizer for fat loss and muscle preservation. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber daily. Respond ONLY with valid JSON, no markdown: {"restaurant":"<n>","known":<bool>,"courses":[{"course":"appetizer|main|dessert","name":"<dish>","cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>,"note":"<tip>"},...],"bestCombo":{"names":"<dish1> + <dish2>","cal":<int>,"prot":<int>,"reasoning":"<1 sentence>"}}`;
-const prompt=`Restaurant: ${name}\ ${menu?'Menu:\ '+menu+'\ ':''}\ So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat.\ Remaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${Math.max(0,T.carb-t.carb)}g carbs, ~${Math.max(0,T.fat-t.fat)}g fat.\ Courses needed: ${courses.join(', ')}.\ Suggest 2 options per course that best fit remaining macros. Prioritize protein. Give best combo order.`;
+const prompt=`Restaurant: ${name}\n${menu?'Menu:\n'+menu+'\n':''}So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat.\nRemaining: ~${rem.cal} cal, ~${rem.prot}g protein, ~${Math.max(0,T.carb-t.carb)}g carbs, ~${Math.max(0,T.fat-t.fat)}g fat.\nCourses needed: ${courses.join(', ')}.\nSuggest 2 options per course that best fit remaining macros. Prioritize protein. Give best combo order.`;
 try{
 const d=parseJ(await callAPI([{role:'user',content:prompt}],sys));
 let html='';
 if(!d.known&&!menu)html+='<div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;">\u26a0\ufe0f Restaurant not in training data \u2014 suggestions based on cuisine. Paste menu for accuracy.</div>';
 const byCourse={};(d.courses||[]).forEach(c=>{if(!byCourse[c.course])byCourse[c.course]=[];byCourse[c.course].push(c);});
-Object.entries(byCourse).forEach(([course,items])=>{items.forEach((item,i)=>{html+=`<div class="rcard" onclick="selectRestDish('${esc(item.name)}',${item.cal},${item.prot},${item.carb||0},${item.fat},${item.fiber||0})"><div class="rcard-course">${course}${items.length>1?' \u00b7 option '+(i+1):''}</div><div class="rcard-name">${esc(item.name)}</div><div class="rcard-macros"><span class="dm c">${item.cal}kcal</span><span class="dm p">${item.prot}g P</span><span class="dm" style="color:var(--carb)">${item.carb||0}g C</span><span class="dm f">${item.fat}g F</span></div>${item.note?`<div class="rcard-note">${esc(item.note)}</div>`:''}<div class="rcard-tap">tap to log \u2192</div></div>`;});});
+S._rest=[];
+Object.entries(byCourse).forEach(([course,items])=>{items.forEach((item,i)=>{const ri=S._rest.length;S._rest.push(item);html+=`<div class="rcard" onclick="selectRestDish(${ri})"><div class="rcard-course">${course}${items.length>1?' \u00b7 option '+(i+1):''}</div><div class="rcard-name">${esc(item.name)}</div><div class="rcard-macros"><span class="dm c">${item.cal}kcal</span><span class="dm p">${item.prot}g P</span><span class="dm" style="color:var(--carb)">${item.carb||0}g C</span><span class="dm f">${item.fat}g F</span></div>${item.note?`<div class="rcard-note">${esc(item.note)}</div>`:''}<div class="rcard-tap">tap to log \u2192</div></div>`;});});
 if(d.bestCombo)html+=`<div class="rest-combo"><div class="rest-combo-lbl">\u2b50 Best Combo</div><div class="rest-combo-name">${esc(d.bestCombo.names)}</div><div class="rest-combo-macros"><span class="dm c">${d.bestCombo.cal}kcal</span><span class="dm p">${d.bestCombo.prot}g P</span></div><div class="rest-combo-note">${esc(d.bestCombo.reasoning)}</div></div>`;
 results.innerHTML=html||'<div class="empty">No suggestions. Try adding menu text.</div>';
 }catch(e){results.innerHTML='<div class="empty">Failed \u2014 try again.</div>';}
 btn.disabled=false;btn.textContent='Optimize \u2192';
 }
-function selectRestDish(name,cal,prot,carb,fat,fiber){
-document.getElementById('e-cal').value=cal;document.getElementById('e-prot').value=prot;document.getElementById('e-carb').value=carb;document.getElementById('e-fat').value=fat;document.getElementById('e-fiber').value=fiber;
-document.getElementById('ai-cal').textContent=cal;document.getElementById('ai-prot').textContent=prot+'g';document.getElementById('ai-carb').textContent=carb+'g';document.getElementById('ai-fat').textContent=fat+'g';document.getElementById('ai-fiber').textContent=fiber+'g';
-document.getElementById('ai-desc').textContent=name;document.getElementById('ai-dots').style.display='none';
-S.pending={type:'dinner',desc:name,notes:'',cal,prot,carb,fat,fiber};
-document.getElementById('air').classList.add('on');
-document.getElementById('air').scrollIntoView({behavior:'smooth',block:'start'});
+function selectRestDish(i){
+const m=(S._rest||[])[i];if(!m)return;
+showPick(m.name,m.cal,m.prot,m.carb||0,m.fat,m.fiber||0);
 }
 
 async function runH2H(){
@@ -1241,7 +1381,7 @@ const t=totals();
 const sys=`You are a macro optimizer. User targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Goal: fat loss with muscle preservation. Respond ONLY with valid JSON, no markdown: {"winner":"A"|"B","a":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"b":{"cal":<int>,"prot":<int>,"carb":<int>,"fat":<int>,"fiber":<int>},"reasoning":"<2 sentences>"}`;
 const ctx=`So far today: ${t.cal} cal, ${t.prot}g protein, ${t.carb}g carbs, ${t.fat}g fat. Remaining: ${T.cal-t.cal} cal, ${T.prot-t.prot}g protein, ${T.carb-t.carb}g carbs.`;
 let content;
-if(aIsText&&bIsText){content=[{type:'text',text:`${ctx}\ Option A: ${aText}\ Option B: ${bText}`}];}
+if(aIsText&&bIsText){content=[{type:'text',text:`${ctx}\nOption A: ${aText}\nOption B: ${bText}`}];}
 else if(!aIsText&&!bIsText){content=[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:S.h2hPhotoA.split(',')[1]}},{type:'text',text:'This is Option A.'},{type:'image',source:{type:'base64',media_type:'image/jpeg',data:S.h2hPhotoB.split(',')[1]}},{type:'text',text:`This is Option B. ${ctx} Which is better?`}];}
 else if(!aIsText){content=[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:S.h2hPhotoA.split(',')[1]}},{type:'text',text:`This is Option A. Option B: ${bText}. ${ctx} Which is better?`}];}
 else{content=[{type:'text',text:`Option A: ${aText}. `},{type:'image',source:{type:'base64',media_type:'image/jpeg',data:S.h2hPhotoB.split(',')[1]}},{type:'text',text:`Above is Option B. ${ctx} Which is better?`}];}
@@ -1267,7 +1407,22 @@ document.getElementById('sum-text').textContent=text;
 btn.disabled=false;btn.textContent='Regenerate \u2192';
 }
 
-function esc(s){return String(s).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"');}
+async function getWeeklyReview(){
+if(!isToday()){showToast('Go to today for the weekly review');return;}
+const btn=document.getElementById('wk-btn');btn.disabled=true;btn.textContent='Analyzing\u2026';
+try{
+const days=Object.keys(S.weekData).sort();
+const lines=days.map(d=>{const w=S.weekData[d];const tgt=S.weekTargets[d]||BASE_T.cal;return `${d}: ${w.cal} cal (target ${tgt}), ${w.prot}g P, ${w.carb}g C, ${w.fat}g F, ${w.fiber}g fiber`;});
+const wt=(S.weightSeries||[]).map(p=>`${p.date}: ${p.weight}`).join('; ');
+const adh=S.adherence;
+const sys=`You are a performance nutrition coach. Targets: ${BASE_T.cal} cal on rest days (higher on training days), ${BASE_T.prot}g protein, ${BASE_T.carb}g carbs, ${BASE_T.fat}g fat, ${BASE_T.fiber}g fiber. Goal: fat loss with muscle preservation. Give a direct 4-5 sentence weekly review covering: calorie adherence trend, protein consistency, weight trajectory, the single biggest weakness, and one concrete focus for next week. No fluff.`;
+const prompt=`Last 7 days:\n${lines.join('\n')||'No logged days.'}\nWeight log 30d (lbs): ${wt||'none'}\n30-day adherence: ${adh?adh.loggedDays+' days logged, '+adh.underCalPct+'% under calories, '+adh.hitProtPct+'% hit protein, streak '+adh.streak:'n/a'}`;
+document.getElementById('sum-text').textContent=await callAPI([{role:'user',content:prompt}],sys);
+}catch(e){document.getElementById('sum-text').textContent='Failed to generate \u2014 try again.';}
+btn.disabled=false;btn.textContent='Weekly review \u2192';
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');}
 function showToast(msg,dur){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),dur||2800);}
 
 // ── MISSED MEAL CHECK ─────────────────────────────────────────────
@@ -1317,6 +1472,7 @@ document.getElementById('mm-overlay').classList.remove('on');
 }
 
 init();
+setInterval(()=>{if(isToday())updateWaterPace();},60000);
 </script>
 
 <!-- MISSED MEAL MODAL -->
