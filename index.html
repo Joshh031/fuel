@@ -24,7 +24,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:10
 .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .logo{font-family:var(--mono);font-size:11px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase}
 .sync-dot{width:5px;height:5px;border-radius:50%;background:var(--dim);transition:background .3s}
-.sync-dot.ok{background:var(--fiber)}.sync-dot.err{background:var(--warn)}
+.sync-dot.ok{background:var(--fiber)}.sync-dot.err{background:var(--warn)}.sync-dot.pend{background:var(--carb)}
 .date-nav{display:flex;align-items:center;justify-content:space-between;background:var(--sur);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 12px;margin-bottom:9px}
 .dnav-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px;line-height:1}
 .dnav-btn:active{color:var(--cal)}.dnav-btn:disabled{opacity:.2;cursor:default}
@@ -690,15 +690,93 @@ const parseLocal=(s)=>{const p=s.split('-');return new Date(parseInt(p[0]),parse
 const td=()=>fmtDate(new Date());
 const isToday=()=>S.activeDate===td();
 
+const httpErr=(r)=>Object.assign(new Error('HTTP '+r.status),{status:r.status});
 const sb={
-async get(t,f,ord){const q=ord?`${f}&order=${ord}`:f;const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});return r.json();},
-async insert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
-async update(t,f,d){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
-async del(t,f){await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});},
-async upsert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(d)});return r.json();}
+async get(t,f,ord){const q=ord?`${f}&order=${ord}`:f;const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw httpErr(r);return r.json();},
+async insert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw httpErr(r);return r.json();},
+async update(t,f,d){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw httpErr(r);return r.json();},
+async del(t,f){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw httpErr(r);},
+async upsert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(d)});if(!r.ok)throw httpErr(r);return r.json();}
 };
 
-function setSyncStatus(s){const d=document.getElementById('sync-dot');d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':'');}
+function setSyncStatus(s){const d=document.getElementById('sync-dot');d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':s==='pend'?' pend':'');d.title=s==='pend'?'Saving… will retry until synced':s==='err'?'Sync error':'';}
+
+// ── OFFLINE OUTBOX ────────────────────────────────────────────────
+// Every write goes through a persistent FIFO queue in localStorage and is
+// flushed in order. Network failures keep the op queued (amber dot) and
+// retry on reconnect/interval; a 4xx response drops the op (red dot) so
+// one bad row can't block the queue.
+const OUTBOX_KEY='fuel_outbox';
+let outbox=[];
+try{outbox=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');outbox.forEach(o=>{delete o.inflight;});}catch(e){outbox=[];}
+function saveOutbox(){try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(outbox));}catch(e){}}
+function enqueue(op){outbox.push(op);saveOutbox();flushOutbox();}
+// day-keyed rows (water/weight/exercise): the latest value wins, so replace
+// any queued-but-not-inflight op for the same table+date instead of stacking
+function enqueueSet(table,body){
+for(let i=outbox.length-1;i>=0;i--){const o=outbox[i];if(!o.inflight&&o.method==='set'&&o.table===table&&o.body.date===body.date)outbox.splice(i,1);}
+enqueue({method:'set',table,body});
+}
+async function execOp(op){
+if(op.method==='insert')return sb.insert(op.table,op.body);
+if(op.method==='update')return sb.update(op.table,op.filter,op.body);
+if(op.method==='del')return sb.del(op.table,op.filter);
+if(op.method==='set'){await sb.del(op.table,`date=eq.${op.body.date}`);return sb.insert(op.table,op.body);}
+}
+let flushing=false;
+async function flushOutbox(){
+if(flushing)return;
+flushing=true;
+while(outbox.length){
+const op=outbox[0];op.inflight=true;
+try{await execOp(op);}
+catch(e){
+op.inflight=false;
+if(e&&e.status&&e.status>=400&&e.status<500&&e.status!==408&&e.status!==429){
+outbox.shift();saveOutbox();
+showToast('An entry failed to sync ('+e.status+') and was dropped',4000);
+setSyncStatus('err');
+continue;
+}
+saveOutbox();flushing=false;setSyncStatus('pend');
+return;
+}
+outbox.shift();saveOutbox();
+}
+flushing=false;setSyncStatus('ok');
+}
+window.addEventListener('online',()=>flushOutbox());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&outbox.length)flushOutbox();});
+setInterval(()=>{if(outbox.length)flushOutbox();},30000);
+
+// ── LOCAL DAY CACHE ───────────────────────────────────────────────
+const dayKey=(d)=>'fuel_day_'+d;
+function cacheDay(){try{localStorage.setItem(dayKey(S.activeDate),JSON.stringify({meals:S.meals,water:S.water,exercises:S.exercises,weight:S.weight}));}catch(e){}}
+function readDayCache(d){try{return JSON.parse(localStorage.getItem(dayKey(d)));}catch(e){return null;}}
+function pruneDayCache(){
+try{const cutoff=dayKey(dateOffset(-45));
+for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith('fuel_day_')&&k<cutoff)localStorage.removeItem(k);}
+}catch(e){}
+}
+// overlay queued-but-unsynced ops so a fresh server fetch can't hide them
+function applyPending(date,ops){
+ops.forEach(op=>{
+if(op.table==='meals'&&op.method==='insert'&&op.body.date===date){
+if(!S.meals.find(m=>m.id===op.body.id))S.meals.push({id:op.body.id,type:op.body.meal_type,desc:op.body.description,notes:op.body.notes||'',cal:op.body.cal,prot:op.body.prot,carb:op.body.carb||0,fat:op.body.fat,fiber:op.body.fiber,time:op.body.meal_time});
+}else if(op.table==='meals'&&op.method==='del'){
+const id=parseInt((op.filter.match(/id=eq\.(\d+)/)||[])[1]);
+if(id)S.meals=S.meals.filter(m=>m.id!==id);
+}else if(op.table==='meals'&&op.method==='update'){
+const id=parseInt((op.filter.match(/id=eq\.(\d+)/)||[])[1]);
+const m=S.meals.find(x=>x.id===id);
+if(m){m.cal=op.body.cal;m.prot=op.body.prot;m.carb=op.body.carb||0;m.fat=op.body.fat;m.fiber=op.body.fiber;m.desc=op.body.description;}
+}else if(op.method==='set'&&op.body.date===date){
+if(op.table==='water_log')S.water=op.body.cups;
+else if(op.table==='weight_log')S.weight=op.body.weight;
+else if(op.table==='exercise_log'){const p=String(op.body.exercise||'').split(',').map(s=>s.trim()).filter(Boolean);S.exercises=p.length?p:['REST'];}
+}
+});
+}
 
 function initDateNav(){S.activeDate=td();renderDateNav();}
 function renderDateNav(){
@@ -744,8 +822,7 @@ if(!cur.length)cur=['REST'];
 }
 S.exercises=cur;
 applyExercise();updateDash();
-const stored=cur.join(',');
-sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_log',{date:S.activeDate,exercise:stored})).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
+enqueueSet('exercise_log',{date:S.activeDate,exercise:cur.join(',')});
 }
 function computeTarget(rawEx){
 let bonus=0;
@@ -758,7 +835,21 @@ let loadSeq=0;
 async function loadDay(){
 const seq=++loadSeq;
 const date=S.activeDate;
-setSyncStatus('');S.meals=[];S.water=0;S.exercises=['REST'];S.weight=null;applyExercise();
+setSyncStatus('');S.meals=[];S.water=0;S.exercises=['REST'];S.weight=null;
+// instant paint from local cache; the network fetch reconciles below
+const cached=readDayCache(date);
+if(cached){
+S.meals=cached.meals||[];
+S.water=cached.water||0;
+S.exercises=(cached.exercises&&cached.exercises.length)?cached.exercises:['REST'];
+S.weight=cached.weight||null;
+}
+if(date===td()){try{const h=JSON.parse(localStorage.getItem('fuel_hist'));if(h)applyHistory(h);}catch(e){}}
+applyExercise();updateDash();renderMeals();renderWeight();
+if(isToday())renderWeek();
+// snapshot pending ops now: anything unsynced at fetch time gets overlaid,
+// anything that flushes mid-fetch is deduped by meal id in applyPending
+const pendingSnap=outbox.slice();
 try{
 const [meals,water,exData,w,hist]=await Promise.all([
 sb.get('meals',`date=eq.${date}`,'created_at.asc'),
@@ -768,19 +859,25 @@ sb.get('weight_log',`date=eq.${date}`).catch(()=>[]),
 date===td()?loadHistory():null
 ]);
 if(seq!==loadSeq)return;
-if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
+S.meals=Array.isArray(meals)?meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time})):[];
 S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
+S.exercises=['REST'];
 if(Array.isArray(exData)&&exData.length>0){
 const raw=exData[0].exercise||'REST';
 const parsed=raw.split(',').map(s=>s.trim()).filter(Boolean);
 S.exercises=parsed.length?parsed:['REST'];
 }
+S.weight=(Array.isArray(w)&&w.length>0)?parseFloat(w[0].weight):null;
+applyPending(date,[...new Set([...pendingSnap,...outbox])]);
 applyExercise();
-if(Array.isArray(w)&&w.length>0)S.weight=parseFloat(w[0].weight);
 if(hist)applyHistory(hist);
-setSyncStatus('ok');
-}catch(e){if(seq!==loadSeq)return;setSyncStatus('err');}
-updateDash();renderMeals();renderWeight();
+setSyncStatus(outbox.length?'pend':'ok');
+}catch(e){
+if(seq!==loadSeq)return;
+// offline or fetch failed — keep the cached view instead of blanking
+setSyncStatus(cached?'pend':'err');
+}
+updateDash();renderMeals();renderWeight();cacheDay();
 if(isToday())renderWeek();
 }
 
@@ -824,7 +921,10 @@ if(wk.length)out.weightAvg=Math.round(wk.reduce((a,w)=>a+w.weight,0)/wk.length*1
 }
 return out;
 }
-function applyHistory(h){S.weekData=h.weekData;S.weekTargets=h.weekTargets;S.weightSeries=h.weightSeries;S.weightAvg=h.weightAvg;S.adherence=h.adherence;}
+function applyHistory(h){
+S.weekData=h.weekData;S.weekTargets=h.weekTargets;S.weightSeries=h.weightSeries;S.weightAvg=h.weightAvg;S.adherence=h.adherence;
+try{localStorage.setItem('fuel_hist',JSON.stringify(h));}catch(e){}
+}
 async function loadWeek(){applyHistory(await loadHistory());}
 
 function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.reduce((a,m)=>a+(m.prot||0),0),carb:S.meals.reduce((a,m)=>a+(m.carb||0),0),fat:S.meals.reduce((a,m)=>a+(m.fat||0),0),fiber:S.meals.reduce((a,m)=>a+(m.fiber||0),0)};}
@@ -905,6 +1005,7 @@ if(df){dfEl.textContent=df.text;dfEl.className='mflag '+df.cls;dfEl.style.displa
 else{dfEl.style.display='none';}
 } else {a.classList.remove('on');document.getElementById('day-flag').style.display='none';}
 if(isToday()&&S.weekData){S.weekData[S.activeDate]={cal:t.cal,prot:t.prot,carb:t.carb,fat:t.fat,fiber:t.fiber};}
+cacheDay();
 }
 
 let waterNudgeDismissed=false;
@@ -1025,8 +1126,13 @@ if(v===null)return;
 const n=parseFloat(v);
 if(isNaN(n)||n<=0||n>1000){showToast('Invalid weight');return;}
 S.weight=Math.round(n*10)/10;
-renderWeight();
-sb.del('weight_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('weight_log',{date:S.activeDate,weight:S.weight})).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(()=>{renderWeight();renderWeek();});}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
+// update the local trend/average immediately; the outbox handles persistence
+S.weightSeries=(S.weightSeries||[]).filter(p=>p.date!==S.activeDate).concat([{date:S.activeDate,weight:S.weight}]).sort((a,b)=>a.date<b.date?-1:1);
+const wk=S.weightSeries.filter(p=>p.date>=dateOffset(-6));
+S.weightAvg=wk.length?Math.round(wk.reduce((a,p)=>a+p.weight,0)/wk.length*10)/10:null;
+renderWeight();cacheDay();
+if(isToday())renderWeek();
+enqueueSet('weight_log',{date:S.activeDate,weight:S.weight});
 }
 function dayFlag(t){
 if(t.cal<400)return null;
@@ -1040,7 +1146,7 @@ if(carbCal>protCal*2.5&&t.carb>120)return{text:'CARB HEAVY',cls:'carb-heavy'};
 return null;
 }
 
-function init(){initDateNav();initAlcohol();loadDay().then(function(){
+function init(){initDateNav();initAlcohol();pruneDayCache();if(outbox.length)flushOutbox();loadDay().then(function(){
 const a=new URLSearchParams(location.search).get('action');
 if(a){history.replaceState(null,'',location.pathname);handleAction(a);}
 else{checkMissedMeals();}
@@ -1065,19 +1171,20 @@ btn.closest('.chips').querySelectorAll('.chip:not(.drink-chip)').forEach(c=>c.cl
 btn.classList.add('active');
 }
 
-let waterQ=Promise.resolve();
 function addWater(n){
 S.water=Math.max(0,Math.min(20,S.water+n));updateDash();
 if(n>0)showToast('\ud83d\udca7 '+S.water+'/'+T.water+' cups');
-const date=S.activeDate,cups=S.water;
-waterQ=waterQ.then(async()=>{try{await sb.del('water_log',`date=eq.${date}`);await sb.insert('water_log',{date,cups});setSyncStatus('ok');}catch(e){setSyncStatus('err');}});
+enqueueSet('water_log',{date:S.activeDate,cups:S.water});
 }
 
-async function quickPreset(key){
+function enqueueMeal(entry){
+enqueue({method:'insert',table:'meals',body:{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time}});
+}
+function quickPreset(key){
 const p=PRESETS[key];
 const entry={id:Date.now(),type:p.type,desc:p.desc,notes:p.notes,cal:p.cal,prot:p.prot,carb:p.carb||0,fat:p.fat,fiber:p.fiber,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
 S.meals.push(entry);updateDash();renderMeals();showToast(entry.cal+' kcal added');
-try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+enqueueMeal(entry);
 }
 
 function openDrinkModal(){document.getElementById('drink-overlay').classList.add('on');updateAlcPreview();}
@@ -1107,7 +1214,7 @@ const item=ALC[S.alcCat][idx];if(!item)return;
 const q=S.alcQty;
 const entry={id:Date.now(),type:'drink',desc:item.name+(q>1?' x'+q:''),notes:'',cal:Math.round(item.cal*q),prot:0,carb:Math.round(item.carb*q),fat:Math.round(item.fat*q),fiber:0,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
 S.meals.push(entry);updateDash();renderMeals();closeDrinkModal();showToast(entry.cal+' kcal added');
-try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:'',cal:entry.cal,prot:0,carb:entry.carb,fat:entry.fat,fiber:0,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+enqueueMeal(entry);
 }
 
 function shrinkImage(file){
@@ -1223,7 +1330,7 @@ if(!S.pending)return;
 const entry={id:Date.now(),type:S.pending.type,desc:S.pending.desc,notes:S.pending.notes,cal:parseInt(document.getElementById('e-cal').value)||0,prot:parseInt(document.getElementById('e-prot').value)||0,carb:parseInt(document.getElementById('e-carb').value)||0,fat:parseInt(document.getElementById('e-fat').value)||0,fiber:parseInt(document.getElementById('e-fiber').value)||0,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
 S.meals.push(entry);updateDash();renderMeals();hideAI();resetInputs();
 showToast(entry.cal+' kcal \u00b7 '+entry.prot+'g protein added');
-try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+enqueueMeal(entry);
 }
 function discardEntry(){hideAI();}
 function resetInputs(){
@@ -1240,7 +1347,7 @@ async function deleteMeal(id){
 const m=S.meals.find(x=>x.id===id);
 if(m&&!confirm('Delete "'+String(m.desc||'entry').substring(0,40)+'"?'))return;
 S.meals=S.meals.filter(m=>m.id!==id);updateDash();renderMeals();
-try{await sb.del('meals',`id=eq.${id}`);setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+enqueue({method:'del',table:'meals',filter:`id=eq.${id}`});
 }
 function openEditModal(id){
 const m=S.meals.find(m=>m.id===id);if(!m)return;S.editId=id;
@@ -1254,8 +1361,9 @@ const m=S.meals.find(m=>m.id===S.editId);if(!m)return;
 m.cal=parseInt(document.getElementById('m-cal').value)||0;m.prot=parseInt(document.getElementById('m-prot').value)||0;
 m.carb=parseInt(document.getElementById('m-carb').value)||0;m.fat=parseInt(document.getElementById('m-fat').value)||0;m.fiber=parseInt(document.getElementById('m-fiber').value)||0;
 m.desc=document.getElementById('m-desc').value;
-updateDash();renderMeals();closeEditModal();showToast('Entry updated');
-try{await sb.update('meals',`id=eq.${S.editId}`,{cal:m.cal,prot:m.prot,carb:m.carb,fat:m.fat,fiber:m.fiber,description:m.desc});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+updateDash();renderMeals();showToast('Entry updated');
+enqueue({method:'update',table:'meals',filter:`id=eq.${S.editId}`,body:{cal:m.cal,prot:m.prot,carb:m.carb,fat:m.fat,fiber:m.fiber,description:m.desc}});
+closeEditModal();
 }
 function closeEditModal(){document.getElementById('edit-overlay').classList.remove('on');S.editId=null;}
 document.getElementById('edit-overlay').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
@@ -1330,7 +1438,7 @@ async function histAdd(i){
 const src=(S._hist||[])[i];if(!src)return;
 const entry={id:Date.now(),type:src.meal_type,desc:src.description,notes:src.notes||'',cal:src.cal||0,prot:src.prot||0,carb:src.carb||0,fat:src.fat||0,fiber:src.fiber||0,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
 S.meals.push(entry);updateDash();renderMeals();showToast('Re-added \u00b7 '+entry.cal+' kcal');histAt=0;
-try{await sb.insert('meals',{id:entry.id,date:S.activeDate,meal_type:entry.type,description:entry.desc,notes:entry.notes,cal:entry.cal,prot:entry.prot,carb:entry.carb,fat:entry.fat,fiber:entry.fiber,meal_time:entry.time});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+enqueueMeal(entry);
 }
 
 async function getDinnerRecs(){
