@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="FUEL">
 <link rel="manifest" href="manifest.json">
 <title>FUEL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://vphqjxjphdsdpqaxqkpf.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d0d0f;--sur:#151518;--sur2:#1c1c20;--bd:#26262c;--bd2:#34343c;--txt:#dddde8;--muted:#64647a;--dim:#2e2e38;--cal:#c8f135;--cald:rgba(200,241,53,0.07);--prot:#5b6fff;--protd:rgba(91,111,255,0.07);--fat:#f5864a;--fatd:rgba(245,134,74,0.07);--fiber:#2ee89a;--fiberd:rgba(46,232,154,0.07);--water:#22c8f0;--waterd:rgba(34,200,240,0.07);--carb:#f0c846;--carbd:rgba(240,200,70,0.07);--alc:#c084fc;--alcd:rgba(192,132,252,0.07);--warn:#f55;--r:9px;--rs:6px;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif}
@@ -700,8 +703,7 @@ function renderDateNav(){
 const d=parseLocal(S.activeDate);
 const today=td();
 const isT=S.activeDate===today;
-const y=new Date();y.setDate(y.getDate()-1);const yStr=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
-let label=isT?'Today':S.activeDate===yStr?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long'});
+let label=isT?'Today':S.activeDate===dateOffset(-1)?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long'});
 let sub=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 document.getElementById('dnav-label').textContent=label;
 document.getElementById('dnav-sub').textContent=sub;
@@ -712,7 +714,7 @@ document.getElementById('log-label').textContent=isT?"Today's Log":label+"'s Log
 }
 function shiftDate(n){
 const d=parseLocal(S.activeDate);d.setDate(d.getDate()+n);
-const nd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const nd=fmtDate(d);
 if(nd>td())return;
 S.activeDate=nd;renderDateNav();loadDay();
 }
@@ -750,62 +752,78 @@ return BASE_T.cal+bonus;
 }
 function dateOffset(n){const d=new Date();d.setDate(d.getDate()+n);return fmtDate(d);}
 
+let loadSeq=0;
 async function loadDay(){
+const seq=++loadSeq;
+const date=S.activeDate;
 setSyncStatus('');S.meals=[];S.water=0;S.exercises=['REST'];S.weight=null;applyExercise();
 try{
-const meals=await sb.get('meals',`date=eq.${S.activeDate}`,'created_at.asc');
+const [meals,water,exData,w,hist]=await Promise.all([
+sb.get('meals',`date=eq.${date}`,'created_at.asc'),
+sb.get('water_log',`date=eq.${date}`),
+sb.get('exercise_log',`date=eq.${date}`),
+sb.get('weight_log',`date=eq.${date}`).catch(()=>[]),
+date===td()?loadHistory():null
+]);
+if(seq!==loadSeq)return;
 if(Array.isArray(meals)){S.meals=meals.map(m=>({id:m.id,type:m.meal_type,desc:m.description,notes:m.notes||'',cal:m.cal,prot:m.prot,carb:m.carb||0,fat:m.fat,fiber:m.fiber,time:m.meal_time}));}
-const water=await sb.get('water_log',`date=eq.${S.activeDate}`);
 S.water=(Array.isArray(water)&&water.length>0)?water[0].cups:0;
-const exData=await sb.get('exercise_log',`date=eq.${S.activeDate}`);
 if(Array.isArray(exData)&&exData.length>0){
 const raw=exData[0].exercise||'REST';
 const parsed=raw.split(',').map(s=>s.trim()).filter(Boolean);
 S.exercises=parsed.length?parsed:['REST'];
 }
 applyExercise();
-try{const w=await sb.get('weight_log',`date=eq.${S.activeDate}`);if(Array.isArray(w)&&w.length>0)S.weight=parseFloat(w[0].weight);}catch(e){}
-if(isToday()){await loadWeek();await loadAdherence();}
+if(Array.isArray(w)&&w.length>0)S.weight=parseFloat(w[0].weight);
+if(hist)applyHistory(hist);
 setSyncStatus('ok');
-}catch(e){setSyncStatus('err');}
+}catch(e){if(seq!==loadSeq)return;setSyncStatus('err');}
 updateDash();renderMeals();renderWeight();
 if(isToday())renderWeek();
 }
 
-async function loadWeek(){
-S.weekData={};S.weekTargets={};
-const start=dateOffset(-6),end=td();
-try{const meals=await sb.get('meals',`date=gte.${start}&date=lte.${end}`,'created_at.asc');
-if(Array.isArray(meals))meals.forEach(m=>{const s=m.date;if(!s)return;if(!S.weekData[s])S.weekData[s]={cal:0,prot:0,carb:0,fat:0,fiber:0};const w=S.weekData[s];w.cal+=m.cal||0;w.prot+=m.prot||0;w.carb+=m.carb||0;w.fat+=m.fat||0;w.fiber+=m.fiber||0;});}catch(e){}
-try{const exs=await sb.get('exercise_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(exs))exs.forEach(e=>{S.weekTargets[e.date]=computeTarget(e.exercise);});}catch(e){}
-S.weightAvg=null;S.weightSeries=[];
-try{const ws=await sb.get('weight_log',`date=gte.${dateOffset(-29)}&date=lte.${end}`,'date.asc');
-if(Array.isArray(ws)){
-S.weightSeries=ws.map(w=>({date:w.date,weight:parseFloat(w.weight)})).filter(w=>!isNaN(w.weight));
-const wk=S.weightSeries.filter(w=>w.date>=start);
-if(wk.length)S.weightAvg=Math.round(wk.reduce((a,w)=>a+w.weight,0)/wk.length*10)/10;
-}}catch(e){}
+// One 30-day pass covers the week strip, weight trend, and adherence stats
+// (previously three overlapping fetch sets run back-to-back).
+async function loadHistory(){
+const start30=dateOffset(-29),start7=dateOffset(-6),end=td();
+const [meals,exs,ws]=await Promise.all([
+sb.get('meals',`date=gte.${start30}&date=lte.${end}`,'created_at.asc').catch(()=>[]),
+sb.get('exercise_log',`date=gte.${start30}&date=lte.${end}`).catch(()=>[]),
+sb.get('weight_log',`date=gte.${start30}&date=lte.${end}`,'date.asc').catch(()=>[])
+]);
+const out={weekData:{},weekTargets:{},weightSeries:[],weightAvg:null,adherence:null};
+const byDay={},exMap={};
+if(Array.isArray(meals))meals.forEach(m=>{
+const s=m.date;if(!s)return;
+if(!byDay[s])byDay[s]={cal:0,prot:0};
+byDay[s].cal+=m.cal||0;byDay[s].prot+=m.prot||0;
+if(s>=start7){
+if(!out.weekData[s])out.weekData[s]={cal:0,prot:0,carb:0,fat:0,fiber:0};
+const w=out.weekData[s];
+w.cal+=m.cal||0;w.prot+=m.prot||0;w.carb+=m.carb||0;w.fat+=m.fat||0;w.fiber+=m.fiber||0;
 }
-
-async function loadAdherence(){
-S.adherence=null;
-const start=dateOffset(-29),end=td();
-try{
-const meals=await sb.get('meals',`date=gte.${start}&date=lte.${end}`,'date.asc');
-if(!Array.isArray(meals))return;
-const byDay={};
-meals.forEach(m=>{if(!byDay[m.date])byDay[m.date]={cal:0,prot:0};byDay[m.date].cal+=m.cal||0;byDay[m.date].prot+=m.prot||0;});
-const exMap={};
-try{const exs=await sb.get('exercise_log',`date=gte.${start}&date=lte.${end}`);if(Array.isArray(exs))exs.forEach(e=>{exMap[e.date]=e.exercise;});}catch(e){}
+});
+if(Array.isArray(exs))exs.forEach(e=>{
+exMap[e.date]=e.exercise;
+if(e.date>=start7)out.weekTargets[e.date]=computeTarget(e.exercise);
+});
 const days=Object.keys(byDay).sort();
-if(!days.length)return;
+if(days.length){
 let underCal=0,hitProt=0;
 days.forEach(d=>{const t=computeTarget(exMap[d]);if(byDay[d].cal<=t)underCal++;if(byDay[d].prot>=BASE_T.prot)hitProt++;});
 let streak=0;
-for(let i=0;i<30;i++){const ds=dateOffset(-i);if(!byDay[ds])break;const t=computeTarget(exMap[ds]);if(byDay[ds].cal<=t)streak++;else break;}
-S.adherence={loggedDays:days.length,underCalPct:Math.round(underCal/days.length*100),hitProtPct:Math.round(hitProt/days.length*100),streak};
-}catch(e){}
+for(let i=0;i<30;i++){const ds=dateOffset(-i);if(!byDay[ds])break;if(byDay[ds].cal<=computeTarget(exMap[ds]))streak++;else break;}
+out.adherence={loggedDays:days.length,underCalPct:Math.round(underCal/days.length*100),hitProtPct:Math.round(hitProt/days.length*100),streak};
 }
+if(Array.isArray(ws)){
+out.weightSeries=ws.map(w=>({date:w.date,weight:parseFloat(w.weight)})).filter(w=>!isNaN(w.weight));
+const wk=out.weightSeries.filter(w=>w.date>=start7);
+if(wk.length)out.weightAvg=Math.round(wk.reduce((a,w)=>a+w.weight,0)/wk.length*10)/10;
+}
+return out;
+}
+function applyHistory(h){S.weekData=h.weekData;S.weekTargets=h.weekTargets;S.weightSeries=h.weightSeries;S.weightAvg=h.weightAvg;S.adherence=h.adherence;}
+async function loadWeek(){applyHistory(await loadHistory());}
 
 function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.reduce((a,m)=>a+(m.prot||0),0),carb:S.meals.reduce((a,m)=>a+(m.carb||0),0),fat:S.meals.reduce((a,m)=>a+(m.fat||0),0),fiber:S.meals.reduce((a,m)=>a+(m.fiber||0),0)};}
 
@@ -940,14 +958,14 @@ return{cp,pp,carbp,fp,fip,worst};
 function renderMeals(){
 const el=document.getElementById('meals-list');
 if(!S.meals.length){el.innerHTML='<div class="empty"><div class="ei">\ud83c\udf7d</div>No meals yet.</div>';return;}
-el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
+el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${esc(m.type)}">${esc(m.type)}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
 }
 
 function renderWeek(){
 const bars=document.getElementById('wbars');
 const now=new Date();
 const days=[];
-for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const s=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
+for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const s=fmtDate(d);days.push({s,label:SDAYS[d.getDay()],isToday:s===td()});}
 const maxCal=Math.max(T.cal*1.1,...days.map(d=>S.weekData[d.s]?.cal||0));
 let totCal=0,logDays=0,bank=0,bankDays=0;
 bars.innerHTML=days.map(day=>{
@@ -1217,6 +1235,8 @@ document.getElementById('vstatus').textContent='Tap to speak';
 }
 
 async function deleteMeal(id){
+const m=S.meals.find(x=>x.id===id);
+if(m&&!confirm('Delete "'+String(m.desc||'entry').substring(0,40)+'"?'))return;
 S.meals=S.meals.filter(m=>m.id!==id);updateDash();renderMeals();
 try{await sb.del('meals',`id=eq.${id}`);setSyncStatus('ok');}catch(e){setSyncStatus('err');}
 }
@@ -1428,20 +1448,19 @@ function showToast(msg,dur){const t=document.getElementById('toast');t.textConte
 // ── MISSED MEAL CHECK ─────────────────────────────────────────────
 async function checkMissedMeals(){
 const SLOTS=['breakfast','lunch','dinner'];
+let meals;
+try{meals=await sb.get('meals',`date=gte.${dateOffset(-3)}&date=lte.${dateOffset(-1)}`);}catch(e){return;}
+if(!Array.isArray(meals))return;
+const byDate={};
+meals.forEach(function(m){if(!byDate[m.date])byDate[m.date]=new Set();byDate[m.date].add(m.meal_type);});
 const missed=[];
 for(let i=1;i<=3;i++){
-const d=new Date();
-d.setDate(d.getDate()-i);
-const dateStr=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-const label=i===1?'Yesterday':d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
-try{
-const meals=await sb.get('meals','date=eq.'+dateStr,'created_at.asc');
-if(!Array.isArray(meals))continue;
-const logged=new Set(meals.map(function(m){return m.meal_type;}));
+const dateStr=dateOffset(-i);
+const label=i===1?'Yesterday':parseLocal(dateStr).toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+const logged=byDate[dateStr]||new Set();
 SLOTS.forEach(function(slot){
 if(!logged.has(slot))missed.push({dateStr:dateStr,label:label,slot:slot});
 });
-}catch(e){}
 }
 if(!missed.length)return;
 var html='';
