@@ -1267,7 +1267,7 @@ document.getElementById('vbtn').classList.remove('rec');document.getElementById(
 document.getElementById('vstatus').textContent=S.voiceTxt?'Tap to re-record':'Tap to speak';
 }
 
-function getSYS(){return `You are a nutrition estimator. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Respond ONLY with valid JSON, no markdown: {"calories":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>,"description":"<one concise sentence>"} Estimate conservatively but realistically. Recognize HomeChef meal kit names. For meal kits assume 600-900 cal per full serving, adjust for stated portion. Flag if protein-to-calorie ratio is poor (below 25g protein per 400 cal).`;}
+function getSYS(){return `You are a nutrition estimator. Targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Break the meal into its distinct components (main dish, each side, bread/butter, sauces, drinks) and estimate every component separately — do not estimate the plate as a whole. For restaurant and diner meals, include sides that come with the dish by default (e.g. home fries with a diner omelette, fries with a pub burger) UNLESS the description explicitly excludes them ("no home fries", "without fries") or names a substitution; never include an explicitly excluded item, and say so in the description. Recognize HomeChef meal kit names; for meal kits assume 600-900 cal per full serving, adjusted for stated portion. Estimate each component conservatively but realistically. Respond ONLY with valid JSON, no markdown: {"items":[{"name":"<component>","cal":<int>,"protein":<int>,"carbs":<int>,"fat":<int>,"fiber":<int>}],"description":"<one concise sentence describing the meal and key assumptions>"}`;}
 
 function getSUMSY(){return `You are a performance nutrition analyst. User targets: ${T.cal} cal, ${T.prot}g protein, ${T.carb}g carbs, ${T.fat}g fat, ${T.fiber}g fiber. Goal: fat loss with muscle preservation. Give a direct 2-3 sentence daily assessment covering: deficit/surplus status, protein adequacy, macro split quality (P/C/F ratio), and one specific recommendation. Call out if fat or carbs dominated the day at protein's expense. No fluff.`;}
 
@@ -1311,6 +1311,14 @@ btn.disabled=false;btn.textContent='Analyze \u2192';
 function showAILoading(){document.getElementById('air').classList.add('on');document.getElementById('ai-dots').style.display='flex';}
 function hideAI(){document.getElementById('air').classList.remove('on');S.pending=null;}
 function showAIResult(p,desc,type,notes){
+// itemized responses: totals are summed client-side so an added or removed
+// component always changes the numbers, and the breakdown is shown for review
+if(Array.isArray(p.items)&&p.items.length){
+const sum=k=>p.items.reduce((a,i)=>a+(parseInt(i[k])||0),0);
+p.calories=sum('cal');p.protein=sum('protein');p.carbs=sum('carbs');p.fat=sum('fat');p.fiber=sum('fiber');
+const parts=p.items.map(i=>`${i.name} ${parseInt(i.cal)||0}`).join(' + ');
+p.description=(p.description?p.description+' — ':'')+parts+' = '+p.calories+' kcal';
+}
 document.getElementById('ai-dots').style.display='none';
 document.getElementById('ai-cal').textContent=p.calories;
 document.getElementById('ai-prot').textContent=p.protein+'g';
