@@ -1384,6 +1384,7 @@ async function handleAction(a){
 if(S.activeDate!==td()){S.activeDate=td();renderDateNav();await loadDay();}
 if(a==='water')addWater(1);
 else if(a==='weight')promptWeight();
+else if(a==='log'){const el=document.getElementById('t-input');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}}
 }
 function urlB64ToU8(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 function pushSupported(){return 'serviceWorker' in navigator&&'PushManager' in window&&typeof Notification!=='undefined';}
