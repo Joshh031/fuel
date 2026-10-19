@@ -1,0 +1,122 @@
+openapi: 3.1.0
+info:
+  title: FUEL Personal Log API
+  version: 0.1.0
+  description: >-
+    Proposed contract for a future authenticated ChatGPT integration.
+    This API is NOT deployed or functional yet.
+servers:
+  - url: https://YOUR-SECURE-FUEL-API.example.com
+security:
+  - oauth2: [fuel.read, fuel.write]
+paths:
+  /v1/meals:
+    get:
+      operationId: listMeals
+      summary: List authorized user's meals for a date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Matching entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Meal' }
+    post:
+      operationId: addMeal
+      summary: Add a confirmed meal to FUEL
+      description: Requires user confirmation prior to invocation.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewMeal' }
+      responses:
+        '201':
+          description: Meal created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meal' }
+        '200': { description: Duplicate idempotency request; original response returned }
+  /v1/meals/{id}:
+    patch:
+      operationId: updateMeal
+      summary: Correct an existing meal after confirmation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MealChanges' }
+      responses:
+        '200': { description: Updated meal }
+    delete:
+      operationId: deleteMeal
+      summary: Delete a meal after explicit confirmation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Meal deleted }
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://YOUR-AUTH-SERVER.example.com/authorize
+          tokenUrl: https://YOUR-AUTH-SERVER.example.com/token
+          scopes:
+            fuel.read: Read FUEL personal logs
+            fuel.write: Add and modify FUEL personal logs
+  schemas:
+    NewMeal:
+      type: object
+      additionalProperties: false
+      required: [date, meal_type, description, cal, prot, carb, fat, fiber]
+      properties:
+        date: { type: string, format: date }
+        meal_type: { type: string, enum: [breakfast, lunch, dinner, snack, drink] }
+        description: { type: string, minLength: 1, maxLength: 500 }
+        notes: { type: string, maxLength: 2000 }
+        cal: { type: integer, minimum: 0, maximum: 10000 }
+        prot: { type: number, minimum: 0, maximum: 1000 }
+        carb: { type: number, minimum: 0, maximum: 1000 }
+        fat: { type: number, minimum: 0, maximum: 1000 }
+        fiber: { type: number, minimum: 0, maximum: 1000 }
+    MealChanges:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        meal_type: { type: string, enum: [breakfast, lunch, dinner, snack, drink] }
+        description: { type: string, minLength: 1, maxLength: 500 }
+        notes: { type: string, maxLength: 2000 }
+        cal: { type: integer, minimum: 0, maximum: 10000 }
+        prot: { type: number, minimum: 0, maximum: 1000 }
+        carb: { type: number, minimum: 0, maximum: 1000 }
+        fat: { type: number, minimum: 0, maximum: 1000 }
+        fiber: { type: number, minimum: 0, maximum: 1000 }
+    Meal:
+      allOf:
+        - $ref: '#/components/schemas/NewMeal'
+        - type: object
+          properties:
+            id: { type: integer }
+            meal_time: { type: string }
