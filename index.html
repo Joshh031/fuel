@@ -367,6 +367,16 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .fuel-view{display:none}.fuel-view.active{display:block}
 .progress-intro{background:var(--sur);border:1px solid var(--bd);padding:13px;margin-bottom:10px;border-radius:var(--r);display:flex;flex-direction:column;gap:5px}
 .progress-intro strong{color:var(--txt);font-size:13px}.progress-intro span{color:var(--muted);font-size:11px;line-height:1.5}
+.progress-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:10px}
+.progress-metric{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.progress-metric:first-child{grid-column:span 2}
+.progress-metric span{font:10px var(--mono);color:var(--muted)}
+.progress-metric b{font:600 22px var(--mono);color:var(--txt)}
+.progress-metric small{font:9px var(--mono);color:var(--muted);line-height:1.5}
+.activity-settings{background:var(--sur);border:1px solid var(--bd);padding:12px;border-radius:var(--r);margin-bottom:10px}
+.activity-settings .sec{margin-top:0}.activity-settings label{font:10px var(--mono);color:var(--muted)}
+.activity-settings select{display:block;width:100%;background:var(--sur2);color:var(--txt);border:1px solid var(--bd2);border-radius:5px;padding:10px 8px;margin:8px 0}
+.activity-settings p{font:10px var(--mono);color:var(--muted);line-height:1.6}
 </style>
 
 </head>
@@ -540,6 +550,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   <div class="meals" id="meals-list"><div class="empty"><div class="ei">&#127869;</div>No meals yet.</div></div>
   </section>
   <section data-fuel-view="progress" class="fuel-view">
+  <div class="progress-summary" id="progress-summary" aria-live="polite"></div>
   <div class="progress-intro"><strong>Progress over perfection</strong><span>Review weekly trends in calories, protein and weight—not individual meals.</span></div>
   <div class="wp">
     <div class="wp-hdr"><div class="wp-title">This Week</div><div class="wp-stats"><div class="wst">Avg <span id="wavg">&#8212;</span></div><div class="wst">Days <span id="wdays">0</span>/7</div><div class="wst">Bank <span id="wbank">&#8212;</span></div></div></div>
@@ -563,6 +574,15 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   </div>
   </section>
   <section data-fuel-view="tools" class="fuel-view">
+  <div class="activity-settings">
+    <div class="sec">Exercise calorie budgeting</div>
+    <label for="activity-mode">Calorie goal method</label>
+    <select id="activity-mode" onchange="setActivityMode(this.value)">
+      <option value="fixed">Fixed — same target on training days</option>
+      <option value="adjusted">Activity-adjusted — existing estimates</option>
+    </select>
+    <p id="activity-mode-note"></p>
+  </div>
   <div class="sec">Planning Tools</div>
   <div class="plan-box">
     <div class="plan-tabs">
@@ -674,6 +694,20 @@ const VAPID_PUB='BFNSOYJ40GPVyp6myP7E_OPjCHdhA_VcrYM-LluvFTxBTFfgtEOm0nXKjPTbyJT
 const BASE_T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
 try{const _sv=JSON.parse(localStorage.getItem('fuel_targets')||'{}');['cal','prot','carb','fat','fiber','water'].forEach(k=>{const n=parseInt(_sv[k]);if(n>0)BASE_T[k]=n;});}catch(e){}
 let T={...BASE_T};
+const ACTIVITY_MODE_KEY='fuel_activity_mode';
+let activityMode=localStorage.getItem(ACTIVITY_MODE_KEY)==='adjusted'?'adjusted':'fixed';
+function setActivityMode(mode){
+  activityMode=mode==='adjusted'?'adjusted':'fixed';
+  localStorage.setItem(ACTIVITY_MODE_KEY,activityMode);
+  syncActivityModeUI();
+  applyExercise();updateDash();renderWeek();
+}
+function syncActivityModeUI(){
+  const picker=document.getElementById('activity-mode');
+  if(picker)picker.value=activityMode;
+  const note=document.getElementById('activity-mode-note');
+  if(note)note.textContent=activityMode==='fixed'?'Your normal workouts are assumed in the base calorie goal. No automatic exercise calories added.':'Uses the existing estimated calories by workout type. These are not measured calories burned.';
+}
 const EX={REST:{cal:0,carb:0},RUN:{cal:350,carb:70},LEGS:{cal:300,carb:60},BACK:{cal:200,carb:40},CHEST:{cal:200,carb:40},SHOULDERS:{cal:150,carb:30}};
 const SDAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
 
@@ -736,7 +770,7 @@ function applyExercise(){
 const exs=Array.isArray(S.exercises)&&S.exercises.length?S.exercises:['REST'];
 let bonusCal=0,bonusCarb=0;
 exs.forEach(ex=>{const b=EX[ex];if(b){bonusCal+=b.cal;bonusCarb+=b.carb;}});
-T.cal=BASE_T.cal+bonusCal;T.carb=BASE_T.carb+bonusCarb;T.prot=BASE_T.prot;T.fat=BASE_T.fat;T.fiber=BASE_T.fiber;T.water=BASE_T.water;
+T.cal=BASE_T.cal+(activityMode==='adjusted'?bonusCal:0);T.carb=BASE_T.carb+(activityMode==='adjusted'?bonusCarb:0);T.prot=BASE_T.prot;T.fat=BASE_T.fat;T.fiber=BASE_T.fiber;T.water=BASE_T.water;
 document.querySelectorAll('.ex-btn').forEach(b=>b.classList.toggle('active',exs.includes(b.dataset.ex)));
 document.getElementById('tgt-cal').textContent='/ '+T.cal.toLocaleString();
 document.getElementById('tgt-prot').textContent='/ '+T.prot+'g';
@@ -760,7 +794,7 @@ sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_lo
 function computeTarget(rawEx){
 let bonus=0;
 if(rawEx)rawEx.split(',').map(s=>s.trim()).filter(Boolean).forEach(ex=>{const b=EX[ex];if(b)bonus+=b.cal;});
-return BASE_T.cal+bonus;
+return BASE_T.cal+(activityMode==='adjusted'?bonus:0);
 }
 function dateOffset(n){const d=new Date();d.setDate(d.getDate()+n);return fmtDate(d);}
 
@@ -783,7 +817,7 @@ if(isToday()){await loadWeek();await loadAdherence();}
 setSyncStatus('ok');
 }catch(e){setSyncStatus('err');}
 updateDash();renderMeals();renderWeight();
-if(isToday())renderWeek();
+if(isToday())renderWeek();renderProgressSummary();
 }
 
 async function loadWeek(){
@@ -801,6 +835,31 @@ if(wk.length)S.weightAvg=Math.round(wk.reduce((a,w)=>a+w.weight,0)/wk.length*10)
 }}catch(e){}
 }
 
+function calculateProgressStats(){
+  const weights=(S.weightSeries||[]).filter(x=>Number.isFinite(x.weight)).sort((a,b)=>a.date.localeCompare(b.date));
+  const recent=weights.slice(-7),prior=weights.slice(-14,-7);
+  const mean=xs=>xs.length?xs.reduce((sum,n)=>sum+n,0)/xs.length:null;
+  const avgWeight=mean(recent.map(x=>x.weight));
+  const priorWeight=mean(prior.map(x=>x.weight));
+  const dates=Object.keys(S.weekData||{}).filter(date=>date<=td()).sort().slice(-14);
+  // Only count days with recorded meals; an empty log does not mean zero intake.
+  const logged=dates.map(date=>S.weekData[date]).filter(day=>day&&day.cal>0);
+  return {avgWeight,weightDelta:avgWeight!==null&&priorWeight!==null?avgWeight-priorWeight:null,
+    calorieAvg:mean(logged.map(d=>d.cal)),proteinAvg:mean(logged.map(d=>d.prot)),
+    proteinHit:logged.length?Math.round(100*logged.filter(d=>d.prot>=BASE_T.prot).length/logged.length):null,
+    loggedDays:logged.length};
+}
+function renderProgressSummary(){
+  const el=document.getElementById('progress-summary');if(!el)return;
+  const v=calculateProgressStats();
+  const weight=v.avgWeight===null?'—':v.avgWeight.toFixed(1)+' lb';
+  const change=v.weightDelta===null?'Need 14 weigh-ins':(v.weightDelta>0?'+':'')+v.weightDelta.toFixed(1)+' lb vs prior 7';
+  const kcal=v.calorieAvg===null?'—':Math.round(v.calorieAvg).toLocaleString();
+  const protein=v.proteinHit===null?'—':v.proteinHit+'%';
+  el.innerHTML='<div class="progress-metric"><span>7-day avg weight</span><b>'+weight+'</b><small>'+change+'</small></div>'+
+    '<div class="progress-metric"><span>Avg logged calories</span><b>'+kcal+'</b><small>Last '+v.loggedDays+' logged days (up to 7)</small></div>'+
+    '<div class="progress-metric"><span>Protein target hit</span><b>'+protein+'</b><small>Last '+v.loggedDays+' logged days</small></div>';
+}
 async function loadAdherence(){
 S.adherence=null;
 const start=dateOffset(-29),end=td();
@@ -1476,6 +1535,7 @@ function closeMissedModal(){
 document.getElementById('mm-overlay').classList.remove('on');
 }
 
+syncActivityModeUI();
 init();
 setInterval(()=>{if(isToday())updateWaterPace();},60000);
 </script>
