@@ -1,0 +1,10 @@
+name = "fuel-chatgpt-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+SUPABASE_URL = "https://vphqjxjphdsdpqaxqkpf.supabase.co"
+
+# Create secrets via: npx wrangler secret put FUEL_API_TOKEN
+#                     npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# Never commit either secret.
