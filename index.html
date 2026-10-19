@@ -1471,6 +1471,41 @@ function closeMissedModal(){
 document.getElementById('mm-overlay').classList.remove('on');
 }
 
+// Refresh cloud-backed data after returning to the app (e.g., after an external sync).
+// Never overwrite in-progress food input, AI confirmation, or an open edit dialog.
+let fuelLastBackgroundAt=0;
+let fuelRefreshInFlight=false;
+function fuelHasUnsavedInput(){
+  if(S.pending||S.isRec||S.editId)return true;
+  const active=document.activeElement;
+  if(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName))return true;
+  for(const id of ['t-input','t-notes','p-notes','vtx']){
+    const el=document.getElementById(id);
+    if(el&&('value' in el)&&String(el.value||'').trim())return true;
+  }
+  return false;
+}
+async function fuelRefreshOnReturn(){
+  if(document.visibilityState!=='visible'||fuelRefreshInFlight||fuelHasUnsavedInput())return;
+  // Debounce focus/visibility events and avoid reloads immediately after leaving.
+  const now=Date.now();
+  if(now-fuelLastBackgroundAt<1500)return;
+  fuelRefreshInFlight=true;
+  try{
+    const previousDate=S.activeDate;
+    if(previousDate&&previousDate!==td()){
+      S.activeDate=td();
+      renderDateNav();
+    }
+    await loadDay();
+  }finally{fuelRefreshInFlight=false;}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')fuelLastBackgroundAt=Date.now();
+  else fuelRefreshOnReturn();
+});
+window.addEventListener('focus',()=>{fuelRefreshOnReturn();});
+
 init();
 setInterval(()=>{if(isToday())updateWaterPace();},60000);
 </script>
