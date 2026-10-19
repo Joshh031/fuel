@@ -1546,7 +1546,7 @@ const demoMeals=[
 {id:103,date:demoToday,meal_type:'snack',description:'Greek yogurt',notes:'Sample',cal:280,prot:26,carb:28,fat:7,fiber:5,meal_time:'15:00 PM',created_at:demoToday+'T15:00:00'}];
 for(let d=1;d<=29;d++){const date=demoDate(-d);demoMeals.push({id:300+d,date,meal_type:'dinner',description:'Sample day',cal:1960+(d%5)*40,prot:140+(d%5)*7,carb:175,fat:72,fiber:30,meal_time:'19:00',created_at:date+'T19:00:00'});}
 sb.get=async function(table,filter){
- const exact=(filter.match(/date=eq\\.([0-9-]+)/)||[])[1],from=(filter.match(/date=gte\\.([0-9-]+)/)||[])[1],to=(filter.match(/date=lte\\.([0-9-]+)/)||[])[1];
+ const exact=(filter.match(/date=eq\.([0-9-]+)/)||[])[1],from=(filter.match(/date=gte\.([0-9-]+)/)||[])[1],to=(filter.match(/date=lte\.([0-9-]+)/)||[])[1];
  const accept=d=>(!exact||d===exact)&&(!from||d>=from)&&(!to||d<=to);
  if(table==='meals')return demoMeals.filter(m=>accept(m.date));
  if(table==='water_log')return [{date:demoToday,cups:5}].filter(x=>accept(x.date));
