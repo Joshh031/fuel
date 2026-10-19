@@ -10,7 +10,7 @@ function validMeal(x,partial=false){
   const keys=Object.keys(x);
   if(!keys.length||keys.some(k=>!ALLOWED.includes(k)))return false;
   if(!partial&&['date','meal_type','description','cal','prot','carb','fat','fiber'].some(k=>!(k in x)))return false;
-  if('date' in x&&(!/^\\d{4}-\\d{2}-\\d{2}$/.test(x.date)||Number.isNaN(Date.parse(x.date+'T12:00:00Z'))))return false;
+  if('date' in x&&(!/^\d{4}-\d{2}-\d{2}$/.test(x.date)||Number.isNaN(Date.parse(x.date+'T12:00:00Z'))))return false;
   if('meal_type' in x&&!TYPES.has(x.meal_type))return false;
   if('description' in x&&(typeof x.description!=='string'||!x.description.trim()||x.description.length>500))return false;
   if('notes' in x&&(typeof x.notes!=='string'||x.notes.length>2000))return false;
@@ -40,10 +40,10 @@ export default {
       const token=req.headers.get('Authorization');
       if(!token||token!=='Bearer '+env.FUEL_API_TOKEN)return err('Unauthorized',401);
       const url=new URL(req.url);
-      if(!/^\\/v1\\/meals(?:\\/\\d+)?$/.test(url.pathname))return err('Not found',404);
+      if(!/^\/v1\/meals(?:\/\d+)?$/.test(url.pathname))return err('Not found',404);
       if(req.method==='GET'&&url.pathname==='/v1/meals'){
         const date=url.searchParams.get('date');
-        if(!date||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return err('Valid date required');
+        if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date))return err('Valid date required');
         return json(await supabase(env,'meals?date=eq.'+encodeURIComponent(date)+'&order=created_at.asc'));
       }
       if(req.method==='POST'&&url.pathname==='/v1/meals'){
@@ -67,7 +67,7 @@ export default {
           throw e;
         }
       }
-      const match=url.pathname.match(/^\\/v1\\/meals\\/(\\d+)$/);
+      const match=url.pathname.match(/^\/v1\/meals\/(\d+)$/);
       if(match&&['PATCH','DELETE'].includes(req.method)){
         const id=Number(match[1]);
         if(!Number.isSafeInteger(id))return err('Invalid meal ID');
