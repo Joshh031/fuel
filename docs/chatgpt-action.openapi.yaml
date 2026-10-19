@@ -1,0 +1,143 @@
+openapi: 3.1.0
+info:
+  title: FUEL Nutrition Logger
+  version: 1.0.0
+  description: Private single-user nutrition logging API for FUEL.
+servers:
+  - url: https://fuel-chatgpt-api.joshh031.workers.dev
+paths:
+  /v1/meals:
+    get:
+      operationId: getMeals
+      summary: Read meals logged on a specific date
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Local calendar date YYYY-MM-DD
+      responses:
+        '200':
+          description: Meals on the selected date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        '401':
+          description: Unauthorized
+    post:
+      operationId: createMeal
+      summary: Save a meal only after the user confirms the meal and macros
+      description: Use a new unique Idempotency-Key per intended meal. Never save unconfirmed estimates.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+          description: Unique per intended meal; reuse for retries of the same meal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealInput'
+      responses:
+        '201':
+          description: Meal created
+        '200':
+          description: An existing meal was returned for the same idempotency key
+        '400':
+          description: Invalid meal request
+        '401':
+          description: Unauthorized
+  /v1/meals/{id}:
+    patch:
+      operationId: modifyMeal
+      summary: Correct a logged meal after user confirmation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealEdit'
+      responses:
+        '200':
+          description: Updated meal
+        '401':
+          description: Unauthorized
+    delete:
+      operationId: removeMeal
+      summary: Delete a logged meal only with explicit user approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Meal deleted
+        '401':
+          description: Unauthorized
+components:
+  schemas:
+    MealInput:
+      type: object
+      additionalProperties: false
+      required: [date, meal_type, description, cal, prot, carb, fat, fiber]
+      properties:
+        date:
+          type: string
+          format: date
+        meal_type:
+          type: string
+          enum: [breakfast, lunch, dinner, snack, drink]
+        description:
+          type: string
+        notes:
+          type: string
+        cal:
+          type: number
+        prot:
+          type: number
+        carb:
+          type: number
+        fat:
+          type: number
+        fiber:
+          type: number
+    MealEdit:
+      type: object
+      additionalProperties: false
+      properties:
+        meal_type:
+          type: string
+          enum: [breakfast, lunch, dinner, snack, drink]
+        description:
+          type: string
+        notes:
+          type: string
+        cal:
+          type: number
+        prot:
+          type: number
+        carb:
+          type: number
+        fat:
+          type: number
+        fiber:
+          type: number
