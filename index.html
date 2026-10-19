@@ -361,6 +361,12 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 .mm-log{background:var(--warn);color:#fff;border:none;border-radius:var(--rs);padding:7px 14px;font-family:var(--sans);font-weight:600;font-size:11px;cursor:pointer;flex-shrink:0;touch-action:manipulation}
 .mm-footer{padding:10px 12px 14px;border-top:1px solid var(--bd)}
 .mm-skip{width:100%;background:none;border:1px solid var(--bd);border-radius:var(--rs);color:var(--muted);font-family:var(--mono);font-size:10px;padding:9px;cursor:pointer;touch-action:manipulation}
+.fuel-nav{display:flex;gap:4px;padding:4px;background:var(--sur);border:1px solid var(--bd);border-radius:9px;margin:0 0 12px}
+.fuel-tab{flex:1;border:0;background:transparent;color:var(--muted);font:600 12px var(--sans);padding:11px 6px;border-radius:6px;cursor:pointer}
+.fuel-tab.active{background:var(--sur2);color:var(--cal)}
+.fuel-view{display:none}.fuel-view.active{display:block}
+.progress-intro{background:var(--sur);border:1px solid var(--bd);padding:13px;margin-bottom:10px;border-radius:var(--r);display:flex;flex-direction:column;gap:5px}
+.progress-intro strong{color:var(--txt);font-size:13px}.progress-intro span{color:var(--muted);font-size:11px;line-height:1.5}
 </style>
 
 </head>
@@ -381,6 +387,8 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <button class="dnav-btn" id="dnav-next" onclick="shiftDate(1)">&#8250;</button>
     </div>
   </div>
+  <nav class="fuel-nav" aria-label="Dashboard sections"><button class="fuel-tab active" data-view-target="today" onclick="setFuelView('today')">Today</button><button class="fuel-tab" data-view-target="progress" onclick="setFuelView('progress')">Progress</button><button class="fuel-tab" data-view-target="tools" onclick="setFuelView('tools')">Tools</button></nav>
+  <section data-fuel-view="today" class="fuel-view active">
   <div class="ex-row" id="ex-row">
     <button class="ex-btn active" data-ex="REST" onclick="setExercise('REST')">REST</button>
     <button class="ex-btn" data-ex="RUN" onclick="setExercise('RUN')">RUN</button>
@@ -440,7 +448,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
   </div>
   <div class="status-row">
     <div class="sbadge"><div class="sdot" id="sdot"></div><span class="slbl">status&nbsp;</span><span class="sval" id="stext">&#8212;</span></div>
-    <div class="sbadge" style="flex:0;white-space:nowrap"><span class="slbl">deficit&nbsp;</span><span class="sval" id="wdef" style="color:var(--fiber)">&#8212;</span></div>
+    <div class="sbadge" style="flex:0;white-space:nowrap"><span class="slbl">remaining&nbsp;</span><span class="sval" id="wdef" style="color:var(--fiber)">&#8212;</span></div>
   </div>
   <div class="assess" id="assessment">
     <div class="assess-top"><div class="assess-icon" id="a-icon"></div><div class="assess-stat" id="a-status"></div><span class="mflag" id="day-flag" style="display:none"></span></div>
@@ -528,6 +536,33 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <button class="btn-no" onclick="discardEntry()">&#10005;</button>
     </div>
   </div>
+  <div class="sec" id="log-label">Today's Log</div>
+  <div class="meals" id="meals-list"><div class="empty"><div class="ei">&#127869;</div>No meals yet.</div></div>
+  </section>
+  <section data-fuel-view="progress" class="fuel-view">
+  <div class="progress-intro"><strong>Progress over perfection</strong><span>Review weekly trends in calories, protein and weight—not individual meals.</span></div>
+  <div class="wp">
+    <div class="wp-hdr"><div class="wp-title">This Week</div><div class="wp-stats"><div class="wst">Avg <span id="wavg">&#8212;</span></div><div class="wst">Days <span id="wdays">0</span>/7</div><div class="wst">Bank <span id="wbank">&#8212;</span></div></div></div>
+    <div class="wbars" id="wbars"></div>
+    <div class="adh-row" id="adh-row" style="display:none">
+      <div class="adh"><div class="adh-lbl">Streak</div><div class="adh-val" id="adh-streak">0</div></div>
+      <div class="adh"><div class="adh-lbl">Under cal</div><div class="adh-val" id="adh-undercal">&#8212;</div></div>
+      <div class="adh"><div class="adh-lbl">Hit prot</div><div class="adh-val" id="adh-prot">&#8212;</div></div>
+      <div class="adh"><div class="adh-lbl">Logged</div><div class="adh-val"><span id="adh-days">0</span>/30</div></div>
+    </div>
+    <div class="wtrend" id="wtrend" style="display:none">
+      <div class="wt-hdr"><span class="wt-lbl">Weight &middot; 30d</span><span class="wt-delta" id="wt-delta"></span></div>
+      <svg id="wt-svg" viewBox="0 0 300 40" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+  <div class="sumbox">
+    <div class="sumlbl">Daily Summary <span class="aichip">CLAUDE</span></div>
+    <div class="sumtxt" id="sum-text">Tap below to get your daily performance analysis.</div>
+    <button class="btn-gen" id="sum-btn" onclick="getDailySummary()">Generate summary &#8594;</button>
+    <button class="btn-gen" id="wk-btn" onclick="getWeeklyReview()" style="margin-left:4px">Weekly review &#8594;</button>
+  </div>
+  </section>
+  <section data-fuel-view="tools" class="fuel-view">
   <div class="sec">Planning Tools</div>
   <div class="plan-box">
     <div class="plan-tabs">
@@ -581,28 +616,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <div class="h2h-result" id="h2h-result"><div class="h2h-winner" id="h2h-winner"></div><div class="h2h-compare" id="h2h-compare"></div><div class="h2h-reasoning" id="h2h-reasoning"></div></div>
     </div>
   </div>
-  <div class="sec" id="log-label">Today's Log</div>
-  <div class="meals" id="meals-list"><div class="empty"><div class="ei">&#127869;</div>No meals yet.</div></div>
-  <div class="wp">
-    <div class="wp-hdr"><div class="wp-title">This Week</div><div class="wp-stats"><div class="wst">Avg <span id="wavg">&#8212;</span></div><div class="wst">Days <span id="wdays">0</span>/7</div><div class="wst">Bank <span id="wbank">&#8212;</span></div></div></div>
-    <div class="wbars" id="wbars"></div>
-    <div class="adh-row" id="adh-row" style="display:none">
-      <div class="adh"><div class="adh-lbl">Streak</div><div class="adh-val" id="adh-streak">0</div></div>
-      <div class="adh"><div class="adh-lbl">Under cal</div><div class="adh-val" id="adh-undercal">&#8212;</div></div>
-      <div class="adh"><div class="adh-lbl">Hit prot</div><div class="adh-val" id="adh-prot">&#8212;</div></div>
-      <div class="adh"><div class="adh-lbl">Logged</div><div class="adh-val"><span id="adh-days">0</span>/30</div></div>
-    </div>
-    <div class="wtrend" id="wtrend" style="display:none">
-      <div class="wt-hdr"><span class="wt-lbl">Weight &middot; 30d</span><span class="wt-delta" id="wt-delta"></span></div>
-      <svg id="wt-svg" viewBox="0 0 300 40" preserveAspectRatio="none"></svg>
-    </div>
-  </div>
-  <div class="sumbox">
-    <div class="sumlbl">Daily Summary <span class="aichip">CLAUDE</span></div>
-    <div class="sumtxt" id="sum-text">Tap below to get your daily performance analysis.</div>
-    <button class="btn-gen" id="sum-btn" onclick="getDailySummary()">Generate summary &#8594;</button>
-    <button class="btn-gen" id="wk-btn" onclick="getWeeklyReview()" style="margin-left:4px">Weekly review &#8594;</button>
-  </div>
+  </section>
 </div>
 
 <div class="overlay" id="drink-overlay">
@@ -809,6 +823,12 @@ S.adherence={loggedDays:days.length,underCalPct:Math.round(underCal/days.length*
 
 function totals(){return{cal:S.meals.reduce((a,m)=>a+(m.cal||0),0),prot:S.meals.reduce((a,m)=>a+(m.prot||0),0),carb:S.meals.reduce((a,m)=>a+(m.carb||0),0),fat:S.meals.reduce((a,m)=>a+(m.fat||0),0),fiber:S.meals.reduce((a,m)=>a+(m.fiber||0),0)};}
 
+function setFuelView(view){
+  if(!['today','progress','tools'].includes(view))return;
+  document.querySelectorAll('[data-fuel-view]').forEach(el=>el.classList.toggle('active',el.dataset.fuelView===view));
+  document.querySelectorAll('.fuel-tab').forEach(el=>{const active=el.dataset.viewTarget===view;el.classList.toggle('active',active);el.setAttribute('aria-current',active?'page':'false');});
+  window.scrollTo(0,0);
+}
 function updateDash(){
 const t=totals();
 const pct=(v,max)=>Math.round(v/max*100);
@@ -849,34 +869,19 @@ document.getElementById('ms-cpct').textContent=cp+'%';
 document.getElementById('ms-fpct').textContent=fp+'%';
 }else{msEl.style.display='none';}
 const rem=T.cal-t.cal;
-const deficit=rem>0?'+'+rem.toLocaleString():rem.toLocaleString();
-document.getElementById('wdef').textContent=deficit+' kcal';
-// Smart macro-aware status
+document.getElementById('wdef').textContent=(rem>=0?rem.toLocaleString():Math.abs(rem).toLocaleString()+' over')+' kcal';
+// Unused calories are a remaining daily allowance, NOT an energy deficit.
 let status,dot,icon,astat,anote;
-const fatOver=t.fat>T.fat;
-const carbOver=t.carb>T.carb;
-const protLow=t.prot<T.prot*0.6&&t.cal>500;
-const protPct=totalMacCal>0?Math.round(pCal/totalMacCal*100):0;
-if(t.cal>=T.cal+200){status='over';dot='#f55';}
-else if(fatOver&&protLow){status='fat high, prot low';dot='#f55';}
-else if(carbOver&&protLow){status='carb heavy';dot='#f0c846';}
-else if(fatOver){status='fat over target';dot='#f5864a';}
-else if(protLow){status='protein low';dot='#f5864a';}
-else if(t.cal>=T.cal-300&&t.prot>=T.prot*0.9){status='on track';dot='#2ee89a';}
-else{status='deficit';dot='#5b6fff';}
+const remProt=Math.max(0,T.prot-t.prot);
+if(t.cal>T.cal+200){status='over budget';dot='#f5864a';icon='ℹ️';astat='Above calorie budget';anote=`About ${Math.round(t.cal-T.cal)} kcal above today's budget. Review your weekly trend before adjusting.`;}
+else if(t.prot>=T.prot&&t.cal<=T.cal){status='protein reached';dot='#2ee89a';icon='✅';astat='Protein goal reached';anote=`${Math.max(0,rem)} kcal remaining. Great protein coverage.`;}
+else if(t.cal>=T.cal-200&&remProt>0){status='protein to go';dot='#f0c846';icon='💪';astat='Prioritize protein';anote=`${remProt}g protein to go. ${Math.max(0,rem)} kcal remaining in today's budget.`;}
+else{status='tracking';dot='#5b6fff';icon='📊';astat='Daily progress';anote=`${Math.max(0,rem)} kcal remaining; ${remProt}g protein to go. Judge progress by weekly averages.`;}
 document.getElementById('stext').textContent=status;
 document.getElementById('sdot').style.background=dot;
 const a=document.getElementById('assessment');
 if(t.cal>0){
 a.classList.add('on');
-const remProt=Math.max(0,T.prot-t.prot),remCarb=Math.max(0,T.carb-t.carb),remFat=Math.max(0,T.fat-t.fat);
-if(status==='over'){icon='\u26a0\ufe0f';astat='Over target';anote=`${t.cal-T.cal} kcal over. P/C/F split: ${protPct}%/${totalMacCal>0?Math.round(cCal/totalMacCal*100):0}%/${totalMacCal>0?Math.round(fCal/totalMacCal*100):0}%.`;}
-else if(status==='fat high, prot low'){icon='\u26a0\ufe0f';astat='Fat high, protein behind';anote=`Fat at ${t.fat}g (${t.fat-T.fat}g over). Only ${t.prot}g protein \u2014 need ${remProt}g more. Prioritize lean protein.`;}
-else if(status==='carb heavy'){icon='\u26a0\ufe0f';astat='Carb heavy, protein light';anote=`Carbs at ${t.carb}g (over ${T.carb}g target). Protein only ${t.prot}g \u2014 ${remProt}g remaining. Swap carbs for protein.`;}
-else if(status==='fat over target'){icon='\u26a0\ufe0f';astat='Fat over target';anote=`Fat at ${t.fat}g/${T.fat}g. ${rem} kcal remaining. Stick to lean meals \u2014 ${remProt}g protein still needed.`;}
-else if(status==='protein low'){icon='\u26a0\ufe0f';astat='Protein behind';anote=`Only ${t.prot}g protein (${remProt}g to go). ${rem} kcal left \u2014 focus on high-protein, low-fat sources.`;}
-else if(status==='on track'){icon='\u2705';astat='On track';anote=`${rem} kcal left. Protein ${t.prot}g/${T.prot}g. Remaining: ${remCarb}g carb, ${remFat}g fat.`;}
-else{icon='\ud83d\udcaa';astat='Deficit \u2014 on track';anote=`${Math.abs(rem)} kcal deficit. ${remProt}g protein, ${remCarb}g carbs, ${remFat}g fat remaining.`;}
 document.getElementById('a-icon').textContent=icon;
 document.getElementById('a-status').textContent=astat;
 document.getElementById('a-note').textContent=anote;
