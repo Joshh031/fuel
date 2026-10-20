@@ -3,10 +3,12 @@ on:
   pull_request:
     paths:
       - "cloudflare/fuel-chatgpt-api/**"
+      - ".github/workflows/fuel-worker-check.yml"
   push:
     branches: [main]
     paths:
       - "cloudflare/fuel-chatgpt-api/**"
+      - ".github/workflows/fuel-worker-check.yml"
 jobs:
   dry-run:
     runs-on: ubuntu-latest
