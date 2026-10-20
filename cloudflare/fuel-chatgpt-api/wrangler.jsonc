@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fuel-chatgpt-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "workers_dev": true,
+  "vars": {
+    "SUPABASE_URL": "https://vphqjxjphdsdpqaxqkpf.supabase.co",
+    "FUEL_OWNER_GITHUB_ID": "37054791"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "caf6882a88114fab870fdbe80705c4c1"
+    }
+  ]
+}
