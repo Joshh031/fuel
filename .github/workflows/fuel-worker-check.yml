@@ -19,7 +19,5 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: cloudflare/fuel-chatgpt-api/package-lock.json
-      - run: npm ci
-        working-directory: cloudflare/fuel-chatgpt-api
-      - run: npm run dry-run
-        working-directory: cloudflare/fuel-chatgpt-api
+      - run: cd cloudflare/fuel-chatgpt-api && npm ci
+      - run: cd cloudflare/fuel-chatgpt-api && npm run dry-run
