@@ -10,43 +10,49 @@ This is the source for the existing Cloudflare Worker `fuel-chatgpt-api`. It kee
 - REST routes continue to require the existing `FUEL_API_TOKEN`.
 - Supabase service role access remains server-side.
 
-## One time setup
+## Required one-time account setup
 
-1. In GitHub, open **Settings → Developer settings → OAuth Apps → New OAuth App**.
+1. In GitHub, open **your profile picture → Settings → Developer settings → OAuth Apps → New OAuth App**.
 2. Enter:
    - Application name: `FUEL ChatGPT`
    - Homepage URL: `https://fuel-chatgpt-api.joshh031.workers.dev`
    - Authorization callback URL: `https://fuel-chatgpt-api.joshh031.workers.dev/callback`
-3. Save the app. Copy its **Client ID**. Click **Generate a new client secret** and keep that value private.
-4. In Cloudflare, open **Workers & Pages → fuel-chatgpt-api → Settings → Variables and Secrets**. Add:
-   - Variable `GITHUB_OAUTH_CLIENT_ID` = the GitHub app's Client ID.
-   - Secret `GITHUB_OAUTH_CLIENT_SECRET` = the GitHub app's client secret.
-5. Confirm the existing secrets `FUEL_API_TOKEN` and `SUPABASE_SERVICE_ROLE_KEY`, the `SUPABASE_URL` variable, and the KV binding `OAUTH_KV` remain on this same Worker.
+3. Select **Register application**. Copy the **Client ID**, then select **Generate a new client secret**. Keep the secret private.
+4. In Cloudflare, open **Workers & Pages → fuel-chatgpt-api → Settings → Variables and Secrets**.
+5. Add a text variable named `GITHUB_OAUTH_CLIENT_ID` with the Client ID. Add a secret named `GITHUB_OAUTH_CLIENT_SECRET` with the generated secret. Save the changes.
+6. Confirm the existing `FUEL_API_TOKEN` and `SUPABASE_SERVICE_ROLE_KEY` secrets, `SUPABASE_URL` variable, and `OAUTH_KV` binding are still attached to this Worker.
 
-Do not paste any secret into GitHub, this README, or ChatGPT.
+Do not paste a secret into GitHub, this README, or ChatGPT.
 
-## Install and verify before deployment
+## Connect this source to the existing Worker
 
-From this directory:
+After the OAuth values above are saved, merge the pull request that adds this folder to `main`. Then in Cloudflare:
+
+1. Open **Workers & Pages → fuel-chatgpt-api → Settings → Builds**.
+2. Select **Connect** and choose the GitHub repository `Joshh031/fuel`.
+3. Set the production branch to `main`.
+4. Set **Root directory** to `cloudflare/fuel-chatgpt-api`.
+5. Leave **Build command** empty. Set **Deploy command** to `npx wrangler deploy`.
+6. Save the connection. Cloudflare will build and deploy the source to the existing Worker. The Worker name in `wrangler.jsonc` is deliberately `fuel-chatgpt-api`.
+
+If Cloudflare asks you to authorize its GitHub app or create a Cloudflare build token, approve that prompt for this repository and Worker.
+
+## Local build check
+
+From `cloudflare/fuel-chatgpt-api`:
 
 ```sh
-npm install
+npm ci
 npm run dry-run
 ```
 
-The dry run compiles the Worker without publishing it. Then deploy this configuration to update the existing Worker:
+The dry run compiles the Worker without publishing it.
 
-```sh
-npm run deploy
-```
+## Checks after deployment
 
-The Worker name in `wrangler.jsonc` is deliberately `fuel-chatgpt-api`; deploying it updates that Worker. Never change the name to `fuel-proxy`.
+1. Open `https://fuel-chatgpt-api.joshh031.workers.dev/mcp`. Without an OAuth token, the response should be HTTP 401 with an OAuth challenge.
+2. Check `https://fuel-chatgpt-api.joshh031.workers.dev/.well-known/oauth-authorization-server` and `https://fuel-chatgpt-api.joshh031.workers.dev/.well-known/oauth-protected-resource`.
+3. In ChatGPT, create a custom connector with URL `https://fuel-chatgpt-api.joshh031.workers.dev/mcp`. Choose OAuth. Sign in with the allowed GitHub account and approve the FUEL scopes.
+4. Ask ChatGPT to read meals for a known date. Then confirm a small test meal after reviewing its estimate. Verify it in the FUEL app and remove the test meal.
 
-## Smoke checks after deployment
-
-1. Open `https://fuel-chatgpt-api.joshh031.workers.dev/mcp`. An unauthenticated request should return HTTP 401 with OAuth resource metadata in the `WWW-Authenticate` header.
-2. Check OAuth metadata at `https://fuel-chatgpt-api.joshh031.workers.dev/.well-known/oauth-authorization-server` and protected-resource metadata under `/.well-known/oauth-protected-resource`.
-3. In ChatGPT, create a custom connector with URL `https://fuel-chatgpt-api.joshh031.workers.dev/mcp`. Choose OAuth when prompted. Sign in with the allowed GitHub account and approve the displayed FUEL scopes.
-4. Use the connector to read one known date. Then log a small test meal only after reviewing and confirming the estimate. Verify the row in the FUEL app and delete the test row.
-
-The OAuth consent screen is displayed for each authorization. ChatGPT must also be configured to ask before write actions if its connector permissions offer that setting.
+The OAuth consent screen appears for each authorization. If ChatGPT offers connector write permissions, set it to ask before writes.
