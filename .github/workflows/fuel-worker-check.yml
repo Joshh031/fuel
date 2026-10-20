@@ -10,9 +10,6 @@ on:
 jobs:
   dry-run:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cloudflare/fuel-chatgpt-api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,4 +18,6 @@ jobs:
           cache: npm
           cache-dependency-path: cloudflare/fuel-chatgpt-api/package-lock.json
       - run: npm ci
+        working-directory: cloudflare/fuel-chatgpt-api
       - run: npm run dry-run
+        working-directory: cloudflare/fuel-chatgpt-api
