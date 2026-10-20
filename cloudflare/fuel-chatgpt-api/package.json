@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "1.1.0"
+    "@cloudflare/workers-oauth-provider": "1.2.3"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
