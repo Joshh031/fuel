@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {createHandler,ownerAllowed,validateOperation} from '../supabase/functions/fuel-data/core.mjs';
 
 const owner={sub:'DGmCAedCrNNBBURG55rFQOWKKba2',email:'joshh031@gmail.com',email_verified:true,
@@ -79,4 +81,37 @@ test('database errors are propagated without exposing server details',async()=>{
 });
 test('date filters cannot be duplicated to widen a mutation',()=>{
   assert.throws(()=>validateOperation({action:'delete',table:'water_log',filter:'date=eq.2026-10-24&date=eq.2026-10-25'}));
+});
+test('an absent mutation target is reported instead of a false success',async()=>{
+  const handler=createHandler({verifyToken:async()=>owner,database:async()=>[]});
+  const response=await handler(new Request('https://example.invalid',{method:'POST',headers:{authorization:'Bearer ok','content-type':'application/json'},body:JSON.stringify({action:'update',table:'meals',filter:'id=eq.1',data:{cal:100}})}));
+  assert.equal(response.status,404);
+});
+function editor(update){
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const source=html.slice(html.indexOf('async function saveEdit(){'),html.indexOf('\nfunction closeEditModal()'));
+  const record={id:42,cal:100,prot:10,carb:10,fat:5,fiber:2,desc:'Original'};
+  const values={'m-cal':200,'m-prot':20,'m-carb':30,'m-fat':10,'m-fiber':4,'m-desc':'Updated'};
+  const elements=Object.fromEntries(Object.entries(values).map(([key,value])=>[key,{value:String(value)}]));
+  elements['meal-save-button']={disabled:false,textContent:'Save Changes'};
+  const events=[];
+  const context={S:{editId:42,meals:[record]},document:{getElementById:id=>elements[id]},
+    sb:{update},setSyncStatus:s=>events.push(s),showToast:s=>events.push(s),updateDash(){},renderMeals(){},
+    closeEditModal(){context.S.editId=null;events.push('closed');}};
+  vm.createContext(context);vm.runInContext(source,context);
+  return {context,record,events,elements};
+}
+test('meal editing retains its ID and confirms success only after the server save',async()=>{
+  let finish;const calls=[];
+  const e=editor(async(...args)=>{calls.push(args);await new Promise(resolve=>{finish=resolve;});});
+  const pending=e.context.saveEdit();
+  assert.equal(calls[0][1],'id=eq.42');assert.equal(e.context.S.editId,42);
+  assert.equal(e.record.desc,'Original');assert.ok(!e.events.includes('Entry updated'));
+  finish();await pending;
+  assert.equal(e.record.desc,'Updated');assert.equal(e.context.S.editId,null);assert.ok(e.events.includes('Entry updated'));
+});
+test('failed meal edits keep the original record and editor open for retry',async()=>{
+  const e=editor(async()=>{throw Error('Access rejected');});await e.context.saveEdit();
+  assert.equal(e.record.desc,'Original');assert.equal(e.context.S.editId,42);assert.ok(!e.events.includes('Entry updated'));
+  assert.equal(e.elements['meal-save-button'].disabled,false);
 });

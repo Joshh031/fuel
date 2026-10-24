@@ -132,7 +132,12 @@ export function createHandler({verifyToken, database}) {
     let operation;
     try { operation = validateOperation(await readBody(req)); }
     catch (e) { return respond({error:e instanceof RangeError ? 'Request too large' : 'Invalid request'}, e instanceof RangeError ? 413 : 400); }
-    try { return respond(await database(operation)); }
+    try {
+      const result = await database(operation);
+      if (['PATCH','DELETE'].includes(operation.method) && Array.isArray(result) && result.length === 0)
+        return respond({error:'That record no longer exists. Refresh FUEL and retry.'},404);
+      return respond(result);
+    }
     catch { return respond({error:'Unable to save or load data. Please retry.'},502); }
   };
 }

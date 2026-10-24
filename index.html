@@ -687,7 +687,7 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
       <div class="mf"><label>Fiber (g)</label><input type="number" id="m-fiber" inputmode="numeric"></div>
       <div class="mf"><label>Description</label><textarea id="m-desc"></textarea></div>
     </div>
-    <div class="macts"><button class="btn-sv" onclick="saveEdit()">Save Changes</button><button class="btn-cn" onclick="closeEditModal()">Cancel</button></div>
+    <div class="macts"><button class="btn-sv" id="meal-save-button" onclick="saveEdit()">Save Changes</button><button class="btn-cn" onclick="closeEditModal()">Cancel</button></div>
   </div>
 </div>
 <div class="overlay" id="tgt-overlay">
@@ -1310,12 +1310,18 @@ document.getElementById('m-desc').value=m.desc;
 document.getElementById('edit-overlay').classList.add('on');
 }
 async function saveEdit(){
-const m=S.meals.find(m=>m.id===S.editId);if(!m)return;
-m.cal=parseInt(document.getElementById('m-cal').value)||0;m.prot=parseInt(document.getElementById('m-prot').value)||0;
-m.carb=parseInt(document.getElementById('m-carb').value)||0;m.fat=parseInt(document.getElementById('m-fat').value)||0;m.fiber=parseInt(document.getElementById('m-fiber').value)||0;
-m.desc=document.getElementById('m-desc').value;
-updateDash();renderMeals();closeEditModal();showToast('Entry updated');
-try{await sb.update('meals',`id=eq.${S.editId}`,{cal:m.cal,prot:m.prot,carb:m.carb,fat:m.fat,fiber:m.fiber,description:m.desc});setSyncStatus('ok');}catch(e){setSyncStatus('err');}
+const id=S.editId;const m=S.meals.find(m=>m.id===id);if(!m)return;
+const button=document.getElementById('meal-save-button');if(button.disabled)return;
+const data={cal:parseInt(document.getElementById('m-cal').value)||0,prot:parseInt(document.getElementById('m-prot').value)||0,
+carb:parseInt(document.getElementById('m-carb').value)||0,fat:parseInt(document.getElementById('m-fat').value)||0,
+fiber:parseInt(document.getElementById('m-fiber').value)||0,description:document.getElementById('m-desc').value};
+button.disabled=true;button.textContent='Saving…';setSyncStatus('');
+try{
+await sb.update('meals',`id=eq.${id}`,data);
+Object.assign(m,{cal:data.cal,prot:data.prot,carb:data.carb,fat:data.fat,fiber:data.fiber,desc:data.description});
+updateDash();renderMeals();closeEditModal();setSyncStatus('ok');showToast('Entry updated');
+}catch(e){setSyncStatus('err');showToast('Meal was not saved. Please retry.',4500);}
+finally{button.disabled=false;button.textContent='Save Changes';}
 }
 function closeEditModal(){document.getElementById('edit-overlay').classList.remove('on');S.editId=null;}
 document.getElementById('edit-overlay').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
