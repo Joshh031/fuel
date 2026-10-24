@@ -12,7 +12,18 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/fuel-orange-32.png">
 <title>FUEL</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="referrer" content="no-referrer">
 <style>
+body.fuel-locked > :not(#fuel-auth-panel):not(script){display:none!important}
+#fuel-auth-panel{max-width:380px;margin:15vh auto 0;padding:28px;text-align:center;line-height:1.6}
+#fuel-auth-panel[hidden]{display:none}
+#fuel-auth-panel img{border-radius:20px;margin-bottom:18px}
+#fuel-auth-panel h1{font-size:25px;margin-bottom:10px}
+#fuel-auth-status{color:#aaaabb;min-height:54px;margin-bottom:22px}
+#fuel-sign-in{width:100%;padding:14px;border:0;border-radius:9px;background:#ff762e;color:#17100b;font:600 15px var(--sans);cursor:pointer}
+#fuel-sign-in:disabled{opacity:.5}
+#fuel-sign-out{background:none;border:0;color:var(--muted);font:11px var(--sans);cursor:pointer}
+
 :root{--bg:#0d0d0f;--sur:#151518;--sur2:#1c1c20;--bd:#26262c;--bd2:#34343c;--txt:#dddde8;--muted:#64647a;--dim:#2e2e38;--cal:#c8f135;--cald:rgba(200,241,53,0.07);--prot:#5b6fff;--protd:rgba(91,111,255,0.07);--fat:#f5864a;--fatd:rgba(245,134,74,0.07);--fiber:#2ee89a;--fiberd:rgba(46,232,154,0.07);--water:#22c8f0;--waterd:rgba(34,200,240,0.07);--carb:#f0c846;--carbd:rgba(240,200,70,0.07);--alc:#c084fc;--alcd:rgba(192,132,252,0.07);--warn:#f55;--r:9px;--rs:6px;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -382,11 +393,18 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 </style>
 
 </head>
-<body>
+<body class="fuel-locked">
+<section id="fuel-auth-panel" aria-labelledby="fuel-auth-title">
+  <img src="icons/fuel-orange-192.png" width="72" height="72" alt="">
+  <h1 id="fuel-auth-title">Sign in to FUEL</h1>
+  <p id="fuel-auth-status" role="status">Checking your session…</p>
+  <button id="fuel-sign-in" type="button" disabled>Continue with Google</button>
+  <noscript>JavaScript is required to sign in securely.</noscript>
+</section>
 <div class="app">
   <div class="hdr">
     <div class="logo">fuel</div>
-    <div style="display:flex;align-items:center;gap:10px"><button class="tgt-btn" onclick="openTargets()" title="Edit targets">&#9881;</button><div class="sync-dot" id="sync-dot"></div></div>
+    <div style="display:flex;align-items:center;gap:10px"><button id="fuel-sign-out" type="button">Sign out</button><button class="tgt-btn" onclick="openTargets()" title="Edit targets">&#9881;</button><div class="sync-dot" id="sync-dot"></div></div>
   </div>
   <div class="date-nav">
     <button class="dnav-btn" onclick="shiftDate(-1)">&#8249;</button>
@@ -690,8 +708,6 @@ textarea.h2h-txt::placeholder{color:var(--dim)}
 <div class="toast" id="toast"></div>
 <script>
 const PROXY='https://fuel-proxy.joshh031.workers.dev';
-const SB_URL='https://vphqjxjphdsdpqaxqkpf.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwaHFqeGpwaGRzZHBxYXhxa3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODE3NDIsImV4cCI6MjA4NzQ1Nzc0Mn0.FqKeUq05RihLNXVIpzvyTEAPmiSXZfYXGgTRCc0uYpE';
 const VAPID_PUB='BFNSOYJ40GPVyp6myP7E_OPjCHdhA_VcrYM-LluvFTxBTFfgtEOm0nXKjPTbyJTGugFRwjGT4vxJENs9cXz6ABw';
 const BASE_T={cal:2100,prot:150,carb:180,fat:80,fiber:35,water:8};
 try{const _sv=JSON.parse(localStorage.getItem('fuel_targets')||'{}');['cal','prot','carb','fat','fiber','water'].forEach(k=>{const n=parseInt(_sv[k]);if(n>0)BASE_T[k]=n;});}catch(e){}
@@ -736,11 +752,11 @@ const td=()=>fmtDate(new Date());
 const isToday=()=>S.activeDate===td();
 
 const sb={
-async get(t,f,ord){const q=ord?`${f}&order=${ord}`:f;const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});return r.json();},
-async insert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
-async update(t,f,d){const r=await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(d)});return r.json();},
-async del(t,f){await fetch(`${SB_URL}/rest/v1/${t}?${f}`,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});},
-async upsert(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(d)});return r.json();}
+get:(table,filter,order)=>FuelAuth.request({action:'get',table,filter,...(order?{order}:{})}),
+insert:(table,data)=>FuelAuth.request({action:'insert',table,data}),
+update:(table,filter,data)=>FuelAuth.request({action:'update',table,filter,data}),
+del:(table,filter)=>FuelAuth.request({action:'delete',table,filter}),
+upsert:(table,data)=>FuelAuth.request({action:'upsert',table,data})
 };
 
 function setSyncStatus(s){const d=document.getElementById('sync-dot');d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':'');}
@@ -791,7 +807,7 @@ if(!cur.length)cur=['REST'];
 S.exercises=cur;
 applyExercise();updateDash();
 const stored=cur.join(',');
-sb.del('exercise_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('exercise_log',{date:S.activeDate,exercise:stored})).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
+sb.upsert('exercise_log',{date:S.activeDate,exercise:stored}).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err'));
 }
 function computeTarget(rawEx){
 let bonus=0;
@@ -1006,7 +1022,7 @@ return{cp,pp,carbp,fp,fip,worst};
 function renderMeals(){
 const el=document.getElementById('meals-list');
 if(!S.meals.length){el.innerHTML='<div class="empty"><div class="ei">\ud83c\udf7d</div>No meals yet.</div>';return;}
-el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
+el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${esc(m.type)}">${esc(m.type)}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${esc(m.time||'')}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
 }
 
 function renderWeek(){
@@ -1072,7 +1088,7 @@ const n=parseFloat(v);
 if(isNaN(n)||n<=0||n>1000){showToast('Invalid weight');return;}
 S.weight=Math.round(n*10)/10;
 renderWeight();
-sb.del('weight_log',`date=eq.${S.activeDate}`).then(()=>sb.insert('weight_log',{date:S.activeDate,weight:S.weight})).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(()=>{renderWeight();renderWeek();});}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
+sb.upsert('weight_log',{date:S.activeDate,weight:S.weight}).then(()=>{setSyncStatus('ok');if(isToday())loadWeek().then(()=>{renderWeight();renderWeek();});}).catch(()=>{setSyncStatus('err');showToast('Save failed \u2014 is the weight_log table created?',4000);});
 }
 function dayFlag(t){
 if(t.cal<400)return null;
@@ -1116,7 +1132,7 @@ function addWater(n){
 S.water=Math.max(0,Math.min(20,S.water+n));updateDash();
 if(n>0)showToast('\ud83d\udca7 '+S.water+'/'+T.water+' cups');
 const date=S.activeDate,cups=S.water;
-waterQ=waterQ.then(async()=>{try{await sb.del('water_log',`date=eq.${date}`);await sb.insert('water_log',{date,cups});setSyncStatus('ok');}catch(e){setSyncStatus('err');}});
+waterQ=waterQ.then(async()=>{try{await sb.upsert('water_log',{date,cups});setSyncStatus('ok');}catch(e){setSyncStatus('err');}});
 }
 
 async function quickPreset(key){
@@ -1368,7 +1384,7 @@ if(!rows.length){list.innerHTML='<div class="empty"><div class="ei">\u26a1</div>
 const seen=new Set(),unique=[];
 rows.forEach(m=>{const k=(m.description||'').substring(0,40);if(!k||seen.has(k))return;seen.add(k);unique.push(m);});
 S._hist=unique.slice(0,20);
-list.innerHTML=S._hist.map((m,i)=>`<div class="hi"><div class="hi-info"><div class="hi-name">${esc(m.description.substring(0,52))}${m.description.length>52?'\u2026':''}</div><div class="hi-meta">${esc(m.meal_type)} \u00b7 ${m.date===td()?(m.meal_time||'today'):fmtShort(m.date)}</div></div><div class="hi-nums"><span class="hc">${m.cal||0}kcal</span><br><span class="hp">${m.prot||0}g P</span></div><button class="hi-add" onclick="histAdd(${i})">+</button></div>`).join('');
+list.innerHTML=S._hist.map((m,i)=>`<div class="hi"><div class="hi-info"><div class="hi-name">${esc(m.description.substring(0,52))}${m.description.length>52?'\u2026':''}</div><div class="hi-meta">${esc(m.meal_type)} \u00b7 ${esc(m.date===td()?(m.meal_time||'today'):fmtShort(m.date))}</div></div><div class="hi-nums"><span class="hc">${m.cal||0}kcal</span><br><span class="hp">${m.prot||0}g P</span></div><button class="hi-add" onclick="histAdd(${i})">+</button></div>`).join('');
 }
 async function histAdd(i){
 const src=(S._hist||[])[i];if(!src)return;
@@ -1538,7 +1554,7 @@ document.getElementById('mm-overlay').classList.remove('on');
 }
 
 syncActivityModeUI();
-init();
+// Data loads after the owner session is verified in fuel-auth.js.
 setInterval(()=>{if(isToday())updateWaterPace();},60000);
 </script>
 
@@ -1557,5 +1573,7 @@ setInterval(()=>{if(isToday())updateWaterPace();},60000);
   </div>
 </div>
 <button class="fab-water" id="fab-water" onclick="addWater(1)">&#128167;<span class="fab-count" id="fab-count">0</span></button>
+<script type="module" src="fuel-auth.js?v=20261024"></script>
 </body>
 </html>
+

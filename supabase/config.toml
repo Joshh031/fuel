@@ -1,0 +1,4 @@
+[functions.fuel-data]
+# Firebase JWT signature, issuer, audience, verified owner and Google provider
+# are checked inside the function before any database request.
+verify_jwt = false
